@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>UNIFY Test Runner - 28 Automated Diagnostic Tests</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 0 16px;
+      background: #F4F6F3;
+      color: #1F2A44;
+    }
+    h1 {
+      font-size: 22px;
+      margin-bottom: 4px;
+    }
+    .summary-badge {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+    .pass-badge { background: #EAF5EF; color: #2E7D5B; border: 1px solid #2E7D5B; }
+    .fail-badge { background: #FDF0ED; color: #C2412D; border: 1px solid #C2412D; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    th, td {
+      padding: 10px 14px;
+      border-bottom: 1px solid #E2E8F0;
+      font-size: 13.5px;
+      text-align: left;
+    }
+    th {
+      background: #1F2A44;
+      color: white;
+    }
+    .status-pass {
+      color: #2E7D5B;
+      font-weight: 700;
+    }
+    .status-fail {
+      color: #C2412D;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <h1>UNIFY Diagnostic Test Suite</h1>
+  <p style="color: #64748B; font-size: 14px;">Automated rule tests for reconciliation, duplicate detection, name matching, and edge cases.</p>
+  <div id="summary">Running tests...</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 50px;">#</th>
+        <th>Test Description</th>
+        <th style="width: 80px;">Status</th>
+      </tr>
+    </thead>
+    <tbody id="testTableBody"></tbody>
+  </table>
+
+  <script src="../www/index.html" type="text/html" id="sourceDummy"></script>
+  <script>
+    // Load and run the 28 tests
+    window.addEventListener("DOMContentLoaded", () => {
+      // Create iframe or fetch script from www/index.html
+      fetch("../www/index.html")
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(html, "text/html");
+          const scripts = doc.querySelectorAll("script");
+          let targetCode = "";
+          scripts.forEach(s => {
+            if (s.textContent.includes("function reconcile")) {
+              targetCode = s.textContent;
+            }
+          });
+          if (targetCode) {
+            eval(targetCode);
+            if (window.runTests) {
+              const res = window.runTests();
+              const tbody = document.getElementById("testTableBody");
+              tbody.innerHTML = "";
+              res.logs.forEach((log, idx) => {
+                const isPass = log.startsWith("PASS");
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                  <td>${idx + 1}</td>
+                  <td>${log.replace(/^(PASS|FAIL):\s*/, "")}</td>
+                  <td class="${isPass ? 'status-pass' : 'status-fail'}">${isPass ? 'PASS' : 'FAIL'}</td>
+                `;
+                tbody.appendChild(tr);
+              });
+              const summary = document.getElementById("summary");
+              if (res.failed === 0) {
+                summary.innerHTML = `<span class="summary-badge pass-badge">✓ ALL ${res.passed} TESTS PASSED</span>`;
+              } else {
+                summary.innerHTML = `<span class="summary-badge fail-badge">⚠ ${res.failed} TESTS FAILED (${res.passed} passed)</span>`;
+              }
+            }
+          }
+        })
+        .catch(err => {
+          console.error("Test loader error:", err);
+          document.getElementById("summary").textContent = "Open in web server to execute automated fetch runner or check console in main app.";
+        });
+    });
+  </script>
+</body>
+</html>

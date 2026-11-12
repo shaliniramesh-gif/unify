@@ -1,0 +1,8 @@
+{
+  "name": "UNIFY - Shop Bill & Payment Reconciliation",
+  "description": "Mobile-first kirana and home shop reconciliation tool that matches daily sales against payments, alerts on mismatches, and shares PDF summaries to WhatsApp.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

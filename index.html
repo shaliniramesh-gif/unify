@@ -1,0 +1,3486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>UNIFY - Shop Bill & Payment Reconciliation</title>
+  <meta name="description" content="Mobile-first kirana and home shop reconciliation tool that matches daily sales against payments, alerts on mismatches, and shares PDF summaries to WhatsApp.">
+  <meta property="og:title" content="UNIFY - Shop Bill & Payment Reconciliation">
+  <meta property="og:description" content="Mobile-first kirana and home shop reconciliation tool that matches daily sales against payments, alerts on mismatches, and shares PDF summaries to WhatsApp.">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <!-- Google Fonts: Inter / Hind Madurai / Noto Sans Tamil -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+Tamil:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Three.js for 3D Reconciliation Progress Ring Visualization -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <style>
+    /* ==========================================================================
+       CSS VARIABLES: DEEP NAVY / HIGH CONTRAST THEME
+       Tailored for shopkeepers & seniors: large numbers, 48px touch targets.
+       ========================================================================== */
+    :root {
+      --bg-dark: #0B132B;
+      --card-dark: #151F38;
+      --card-surface: #1C2A4C;
+      --card-highlight: #233560;
+      --border-color: #273A63;
+      --border-light: rgba(255, 255, 255, 0.12);
+
+      --text-main: #F1F5F9;
+      --text-muted: #94A3B8;
+      --text-faint: #64748B;
+
+      --blue-accent: #38BDF8;
+      --blue-glow: rgba(56, 189, 248, 0.25);
+      --green-status: #10B981;
+      --green-bg: rgba(16, 185, 129, 0.15);
+      --green-border: rgba(16, 185, 129, 0.35);
+
+      --red-status: #EF4444;
+      --red-bg: rgba(239, 68, 68, 0.15);
+      --red-border: rgba(239, 68, 68, 0.35);
+
+      --amber-status: #F59E0B;
+      --amber-bg: rgba(245, 158, 11, 0.15);
+      --amber-border: rgba(245, 158, 11, 0.35);
+
+      --purple-status: #A855F7;
+      --purple-bg: rgba(168, 85, 247, 0.15);
+
+      --font-family: "Plus Jakarta Sans", "Noto Sans Tamil", system-ui, -apple-system, sans-serif;
+      --nav-height: 72px;
+      --radius: 14px;
+      --radius-sm: 8px;
+    }
+
+    /* Base Reset & Senior-Friendly Typography */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: var(--font-family);
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      line-height: 1.5;
+      font-size: 16px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding-top: env(safe-area-inset-top, 0px);
+      padding-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 24px);
+      overflow-x: hidden;
+    }
+
+    /* Top Sticky Header */
+    .top-bar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(11, 19, 43, 0.92);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border-color);
+      padding: 12px 16px;
+    }
+
+    .top-bar-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .brand-block {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand-name {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #FFFFFF;
+    }
+
+    .shop-subtitle {
+      font-size: 13.5px;
+      color: var(--blue-accent);
+      font-weight: 600;
+    }
+
+    /* Language Switcher Button (Large & Visible) */
+    .lang-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: var(--card-surface);
+      color: #FFFFFF;
+      border: 1px solid var(--blue-accent);
+      padding: 9px 16px;
+      border-radius: 999px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      min-height: 48px;
+      transition: all 0.2s ease;
+      box-shadow: 0 0 12px var(--blue-glow);
+    }
+
+    .lang-btn:hover {
+      background: var(--blue-accent);
+      color: #0B132B;
+      transform: translateY(-1px);
+    }
+
+    /* Permanent Banner (Honesty Rules) */
+    .sample-banner {
+      background: #3B2A10;
+      border-bottom: 1px solid #785210;
+      color: #FDE68A;
+      padding: 10px 16px;
+      font-size: 14.5px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      text-align: center;
+    }
+
+    .sample-banner.hidden {
+      display: none;
+    }
+
+    /* Responsive Main Shell */
+    .app-shell {
+      width: 100%;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Tab Content Switching */
+    .tab-content {
+      display: none;
+      flex-direction: column;
+      gap: 20px;
+      animation: fadeIn 0.25s ease;
+    }
+
+    .tab-content.active {
+      display: flex;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Glassmorphism Card System */
+    .card {
+      background: var(--card-dark);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    }
+
+    /* Hero Strip: Immediate Exception Status */
+    .hero-strip {
+      background: linear-gradient(135deg, #152244 0%, #1A2D5C 100%);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+    }
+
+    .hero-info-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .hero-title {
+      font-size: 24px;
+      font-weight: 800;
+      color: #FFFFFF;
+      letter-spacing: -0.3px;
+    }
+
+    .hero-subtitle {
+      font-size: 15px;
+      color: var(--blue-accent);
+      font-weight: 500;
+    }
+
+    .hero-number-group {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .hero-count-large {
+      font-size: 42px;
+      font-weight: 800;
+      color: #F87171;
+      line-height: 1;
+      text-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+    }
+
+    .hero-status-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 8px 16px;
+      border-radius: 999px;
+      font-size: 14.5px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid rgba(239, 68, 68, 0.5);
+      color: #FCA5A5;
+    }
+
+    /* 3D Dashboard & Progress Ring Container */
+    .three-d-dashboard-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 860px) {
+      .three-d-dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .three-d-card {
+      position: relative;
+      background: radial-gradient(circle at 50% 35%, #18284C 0%, #101B34 100%);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    .three-d-header {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+
+    .three-d-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: #FFFFFF;
+    }
+
+    .three-d-subtitle {
+      font-size: 13.5px;
+      color: var(--text-muted);
+    }
+
+    .three-d-badge {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid var(--blue-accent);
+      color: var(--blue-accent);
+    }
+
+    .three-d-canvas-wrapper {
+      position: relative;
+      width: 100%;
+      height: 250px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #reconciliation3dCanvas {
+      width: 100%;
+      height: 100%;
+      cursor: grab;
+      touch-action: none;
+    }
+
+    #reconciliation3dCanvas:active {
+      cursor: grabbing;
+    }
+
+    .three-d-center-overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .three-d-pct {
+      font-size: 40px;
+      font-weight: 800;
+      color: #FFFFFF;
+      letter-spacing: -1px;
+      text-shadow: 0 0 16px rgba(16, 185, 129, 0.4);
+    }
+
+    .three-d-lbl {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--green-status);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .three-d-sub {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .three-d-legend {
+      display: flex;
+      gap: 16px;
+      margin-top: 6px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .dot-green { background: var(--green-status); box-shadow: 0 0 6px var(--green-status); }
+    .dot-red { background: var(--red-status); box-shadow: 0 0 6px var(--red-status); }
+    .dot-gray { background: #64748B; }
+
+    .three-d-hint {
+      font-size: 12px;
+      color: var(--text-faint);
+      margin-top: 6px;
+    }
+
+    /* Channel Distribution Visualization Side Card */
+    .distribution-card {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .dist-title {
+      font-size: 19px;
+      font-weight: 800;
+      color: #FFFFFF;
+      margin-bottom: 2px;
+    }
+
+    .dist-sub {
+      font-size: 13.5px;
+      color: var(--text-muted);
+    }
+
+    .channel-bars-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .channel-bar-item {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .channel-label-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 14.5px;
+      font-weight: 600;
+    }
+
+    .channel-track {
+      width: 100%;
+      height: 9px;
+      background: var(--card-surface);
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+    }
+
+    .channel-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .fill-upi { background: linear-gradient(90deg, #38BDF8, #2563EB); }
+    .fill-market { background: linear-gradient(90deg, #A855F7, #7C3AED); }
+    .fill-credit { background: linear-gradient(90deg, #F59E0B, #D97706); }
+    .fill-cash { background: linear-gradient(90deg, #64748B, #475569); }
+    .fill-paypal { background: linear-gradient(90deg, #0070BA, #003087); }
+
+    /* 6 Metric Cards Grid */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+
+    @media (max-width: 768px) {
+      .dashboard-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 480px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .metric-card {
+      background: var(--card-dark);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .metric-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--blue-accent);
+    }
+
+    .metric-val {
+      font-size: 36px;
+      font-weight: 800;
+      color: #FFFFFF;
+      letter-spacing: -0.5px;
+      line-height: 1.1;
+    }
+
+    .metric-lbl {
+      font-size: 15px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .matched-card { border-left: 4px solid var(--green-status); }
+    .pending-card { border-left: 4px solid var(--amber-status); }
+    .dup-card { border-left: 4px solid var(--blue-accent); }
+    .highlight-card { border-left: 4px solid #6366F1; }
+
+    /* Visual Alert Center (No raw wall of text!) */
+    .section-heading-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .section-heading {
+      font-size: 22px;
+      font-weight: 800;
+      color: #FFFFFF;
+      letter-spacing: -0.3px;
+    }
+
+    .compact-alerts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 14px;
+      margin-top: 12px;
+    }
+
+    .compact-alert-card {
+      background: var(--card-surface);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      border: 1px solid var(--border-color);
+      position: relative;
+      overflow: hidden;
+      transition: all 0.2s ease;
+    }
+
+    .compact-alert-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+    }
+
+    .compact-alert-card.red-alert {
+      border-left: 5px solid var(--red-status);
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, var(--card-surface) 100%);
+    }
+
+    .compact-alert-card.amber-alert {
+      border-left: 5px solid var(--amber-status);
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, var(--card-surface) 100%);
+    }
+
+    .compact-alert-card.blue-alert {
+      border-left: 5px solid var(--blue-accent);
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.08) 0%, var(--card-surface) 100%);
+    }
+
+    .alert-card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .alert-type-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .alert-icon {
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    .alert-card-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: #FFFFFF;
+    }
+
+    .alert-card-sub {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .alert-card-amount {
+      font-size: 20px;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 6px;
+      white-space: nowrap;
+    }
+
+    .red-amount { background: var(--red-bg); color: #FCA5A5; border: 1px solid var(--red-border); }
+    .amber-amount { background: var(--amber-bg); color: #FDE68A; border: 1px solid var(--amber-border); }
+    .blue-amount { background: rgba(56, 189, 248, 0.15); color: #BAE6FD; border: 1px solid rgba(56, 189, 248, 0.35); }
+
+    .alert-card-explanation {
+      font-size: 14.5px;
+      color: #E2E8F0;
+      line-height: 1.45;
+    }
+
+    .alert-card-action {
+      display: flex;
+      justify-content: flex-end;
+      padding-top: 6px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .btn-alert-action {
+      background: transparent;
+      border: 1px solid var(--border-color);
+      color: var(--blue-accent);
+      padding: 7px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+      min-height: 40px;
+    }
+
+    .btn-alert-action:hover {
+      background: var(--blue-accent);
+      color: #0B132B;
+    }
+
+    /* All Clear Box */
+    .all-clear-card {
+      background: var(--green-bg);
+      border: 1px solid var(--green-border);
+      color: #A7F3D0;
+      border-radius: var(--radius);
+      padding: 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    /* PayPal Integration Card */
+    .paypal-card {
+      background: linear-gradient(135deg, #0E1E3D 0%, #152A54 100%);
+      border: 1px solid rgba(0, 112, 186, 0.4);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+
+    .paypal-status-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      background: rgba(16, 185, 129, 0.2);
+      border: 1px solid var(--green-status);
+      color: #A7F3D0;
+    }
+
+    .paypal-notice-box {
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      color: #FDE68A;
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 13.5px;
+      line-height: 1.45;
+      margin: 12px 0 16px 0;
+    }
+
+    .paypal-actions-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .paypal-sync-result {
+      margin-top: 12px;
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+    }
+
+    .paypal-sync-result.success {
+      background: var(--green-bg);
+      border: 1px solid var(--green-border);
+      color: #A7F3D0;
+    }
+
+    .paypal-sync-result.error {
+      background: var(--red-bg);
+      border: 1px solid var(--red-border);
+      color: #FCA5A5;
+    }
+
+    /* Action Buttons Grid */
+    .action-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    @media (max-width: 768px) {
+      .action-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 480px) {
+      .action-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Standard Button Styles (Senior/Shopkeeper Readable, Min 48px Touch Target) */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 48px;
+      padding: 10px 18px;
+      font-size: 15.5px;
+      font-weight: 700;
+      border-radius: var(--radius-sm);
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-decoration: none;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn-primary {
+      background: var(--blue-accent);
+      color: #0B132B;
+    }
+
+    .btn-primary:hover {
+      background: #7DD3FC;
+    }
+
+    .btn-secondary {
+      background: var(--card-surface);
+      border: 1px solid var(--border-color);
+      color: #FFFFFF;
+    }
+
+    .btn-secondary:hover {
+      background: var(--card-highlight);
+    }
+
+    .btn-whatsapp {
+      background: #25D366;
+      color: #052E16;
+    }
+
+    .btn-whatsapp:hover {
+      background: #4ADE80;
+    }
+
+    .btn-pdf {
+      background: #DC2626;
+      color: #FFFFFF;
+    }
+
+    .btn-pdf:hover {
+      background: #EF4444;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 13.5px;
+      font-weight: 700;
+      border: 1px solid var(--border-color);
+      background: var(--card-surface);
+      color: var(--text-main);
+      cursor: pointer;
+      min-height: 38px;
+      transition: all 0.2s ease;
+    }
+
+    .chip:hover, .chip.active {
+      background: var(--blue-accent);
+      color: #0B132B;
+      border-color: var(--blue-accent);
+    }
+
+    /* Tables for Records Tab */
+    .records-table-container {
+      width: 100%;
+      overflow-x: auto;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-color);
+      margin-top: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14.5px;
+      text-align: left;
+    }
+
+    th {
+      background: var(--card-surface);
+      color: var(--text-muted);
+      font-weight: 700;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border-color);
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-main);
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12.5px;
+      font-weight: 700;
+    }
+
+    .status-pill.matched { background: var(--green-bg); color: #A7F3D0; border: 1px solid var(--green-border); }
+    .status-pill.unpaid { background: var(--amber-bg); color: #FDE68A; border: 1px solid var(--amber-border); }
+    .status-pill.duplicate { background: rgba(56, 189, 248, 0.15); color: #BAE6FD; border: 1px solid rgba(56, 189, 248, 0.35); }
+    .status-pill.no-bill { background: var(--red-bg); color: #FCA5A5; border: 1px solid var(--red-border); }
+    .status-pill.cash { background: rgba(148, 163, 184, 0.15); color: #CBD5E1; border: 1px solid rgba(148, 163, 184, 0.3); }
+
+    /* Modal for Alert Details */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      padding: 16px;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal-box {
+      background: var(--card-dark);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 24px;
+      width: 100%;
+      max-width: 520px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+      max-height: 85vh;
+      overflow-y: auto;
+    }
+
+    /* Fixed Bottom Navigation (Min 48px tap targets, 72px height) */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: var(--nav-height);
+      background: rgba(11, 19, 43, 0.95);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      z-index: 100;
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    .nav-item {
+      flex: 1;
+      height: 100%;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      min-height: 48px;
+    }
+
+    .nav-item .nav-icon {
+      font-size: 20px;
+    }
+
+    .nav-item.active {
+      color: var(--blue-accent);
+    }
+
+    .nav-item.active .nav-icon {
+      transform: translateY(-2px);
+    }
+
+    /* Expandable Alert Preview Box */
+    .alert-preview-card {
+      background: var(--card-dark);
+      border: 1px solid var(--border-color);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Sticky Header -->
+  <header class="top-bar">
+    <div class="top-bar-inner">
+      <div class="brand-block">
+        <span class="brand-name">
+          <span>🛒</span> UNIFY
+        </span>
+        <span class="shop-subtitle" id="shopSubtitle">Annachi Store • 26 Oct 2026 • Daily Reconciliation</span>
+      </div>
+      <div class="header-actions">
+        <!-- English / Tamil language toggle button (Default is English) -->
+        <button type="button" class="lang-btn" id="langToggleBtn" aria-label="Toggle language">
+          🌐 <span>தமிழ்</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Permanent Banner (Honesty Rules) -->
+  <aside class="sample-banner" id="sampleBanner" role="note">
+    <span aria-hidden="true" style="font-size: 18px;">⚠️</span>
+    <span id="sampleBannerText">Sample data written by the team to test the logic. Not real shop records.</span>
+  </aside>
+
+  <!-- App Shell Container -->
+  <main class="app-shell" id="appShell">
+
+    <!-- ======================================================================
+         TAB 1: TODAY (3D Dashboard, Metric Cards, Visual Alert Cards & Actions)
+         ====================================================================== -->
+    <section class="tab-content active" id="tabToday" role="tabpanel" aria-labelledby="navToday">
+
+      <!-- Hero Strip: Immediate Exception Status -->
+      <div class="hero-strip" id="heroStrip">
+        <div class="hero-info-group">
+          <div class="hero-title" id="heroTitle">Daily Reconciliation Status</div>
+          <div class="hero-subtitle" id="heroSubtitle">26 Oct 2026 • Sales & Payment Audit</div>
+        </div>
+        <div class="hero-number-group">
+          <div>
+            <span class="hero-count-large" id="heroReviewCount">3</span>
+          </div>
+          <div class="hero-status-pill" id="heroStatusBadge">Needs Attention</div>
+        </div>
+      </div>
+
+      <!-- 3D Progress Ring & Channel Distribution Grid -->
+      <div class="three-d-dashboard-grid">
+
+        <!-- 3D Progress Ring Card (Three.js WebGL) -->
+        <div class="card three-d-card" id="threeDCard">
+          <div class="three-d-header">
+            <div>
+              <div class="three-d-title" id="threeDTitle">3D Reconciliation Progress</div>
+              <div class="three-d-subtitle" id="threeDSubtitle">Interactive spatial verification model</div>
+            </div>
+            <div class="three-d-badge" id="threeDBadge">Three.js WebGL</div>
+          </div>
+
+          <div class="three-d-canvas-wrapper">
+            <canvas id="reconciliation3dCanvas"></canvas>
+            <div class="three-d-center-overlay">
+              <div class="three-d-pct" id="threeDPercentage">90%</div>
+              <div class="three-d-lbl" id="threeDLabel">Matched</div>
+              <div class="three-d-sub" id="threeDDetail">9 / 10 Digital Bills</div>
+            </div>
+          </div>
+
+          <div class="three-d-legend" id="threeDLegend">
+            <div class="legend-item"><span class="legend-dot dot-green"></span><span id="legendMatched">Matched (9)</span></div>
+            <div class="legend-item"><span class="legend-dot dot-red"></span><span id="legendFlagged">Needs Review (3)</span></div>
+            <div class="legend-item"><span class="legend-dot dot-gray"></span><span id="legendCash">Cash Unverified (9)</span></div>
+          </div>
+          <div class="three-d-hint" id="threeDHint">Drag or move cursor to tilt 3D progress ring</div>
+        </div>
+
+        <!-- Payment Channels Distribution Card -->
+        <div class="card distribution-card" id="channelDistCard">
+          <div>
+            <div class="dist-title" id="distTitle">Payment Channels</div>
+            <div class="dist-sub" id="distSub">Breakdown of today's incoming revenue sources</div>
+          </div>
+
+          <div class="channel-bars-list" id="channelBarsList">
+            <!-- Dynamic channel bars -->
+          </div>
+
+          <div style="font-size: 13.5px; color: var(--text-muted); padding-top: 10px; border-top: 1px solid var(--border-color);">
+            💡 <span id="distNotice">Digital channels are cross-verified automatically; unrecorded cash remains invisible.</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 6 Big Metric Cards Grid (Total Bills, Total Amount, Received, Matched, Pending, Duplicates) -->
+      <div>
+        <div class="section-heading-row" style="margin-bottom: 12px;">
+          <h2 class="section-heading" id="headingSummaryCards">Key Summary</h2>
+          <span style="font-size: 14px; color: var(--text-muted); font-weight: 600;" id="recordsCheckedSummary">Total Records Checked: 30</span>
+        </div>
+
+        <div class="dashboard-grid">
+          <!-- Card 1: Total Bills -->
+          <div class="metric-card highlight-card">
+            <div class="metric-val" id="cardTotalBills">20</div>
+            <div class="metric-lbl" id="lblTotalBills">Total Bills</div>
+          </div>
+
+          <!-- Card 2: Total Bill Amount -->
+          <div class="metric-card highlight-card">
+            <div class="metric-val" id="cardTotalAmount">₹6,990</div>
+            <div class="metric-lbl" id="lblTotalAmount">Total Bill Amount</div>
+          </div>
+
+          <!-- Card 3: Payments Received -->
+          <div class="metric-card highlight-card">
+            <div class="metric-val" id="cardPaymentsReceived">₹5,130</div>
+            <div class="metric-lbl" id="lblPaymentsReceived">Payments Received</div>
+          </div>
+
+          <!-- Card 4: Matched Bills -->
+          <div class="metric-card matched-card">
+            <div class="metric-val" id="cardMatchedBills">9</div>
+            <div class="metric-lbl" id="lblMatchedBills">Matched Bills</div>
+          </div>
+
+          <!-- Card 5: Pending Bills -->
+          <div class="metric-card pending-card">
+            <div class="metric-val" id="cardPendingBills">1</div>
+            <div class="metric-lbl" id="lblPendingBills">Pending Bills</div>
+          </div>
+
+          <!-- Card 6: Possible Duplicates -->
+          <div class="metric-card dup-card">
+            <div class="metric-val" id="cardDuplicates">1</div>
+            <div class="metric-lbl" id="lblDuplicates">Possible Duplicates</div>
+          </div>
+        </div>
+
+        <!-- Cash Bills Note -->
+        <div style="margin-top: 10px; font-size: 14px; color: var(--text-muted); font-weight: 600;">
+          💵 <span id="cashBillsNote">Cash Bills: 9 (Cash cannot be verified digitally)</span>
+        </div>
+      </div>
+
+      <!-- All Clear Banner (Shows only if flagged === 0) -->
+      <div class="all-clear-card" id="allClearBox" style="display: none;">
+        <span style="font-size: 28px;">✓</span>
+        <div id="allClearText">All digital bills and payments matched. No discrepancies detected.</div>
+      </div>
+
+      <!-- Visual Alert Center (Compact Cards) -->
+      <div id="alertsMainSection">
+        <div class="section-heading-row" style="margin-bottom: 12px;">
+          <h2 class="section-heading" id="headingAlerts">Exceptions Requiring Review</h2>
+          <button type="button" class="chip" id="viewAllAlertsBtn">
+            🔍 <span id="btnViewAllAlertsText">View All Alerts (3)</span>
+          </button>
+        </div>
+
+        <div class="compact-alerts-grid" id="compactAlertsList">
+          <!-- Compact alert cards rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- PayPal Integration & Payment Sources Card -->
+      <div class="card paypal-card" id="paypalSection">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 24px;">🌐</span>
+              <h3 style="font-size: 19px; font-weight: 800; color: #FFFFFF;" id="paypalTitle">PayPal International Gateway</h3>
+            </div>
+            <p style="font-size: 14px; color: var(--text-muted); margin-top: 3px;" id="paypalSubtitle">Cross-border export reconciliation & developer API sync</p>
+          </div>
+          <div>
+            <span class="paypal-status-badge" id="paypalStatusBadge">● Sandbox Ready</span>
+          </div>
+        </div>
+
+        <!-- Regulatory Notice for India -->
+        <div class="paypal-notice-box" id="paypalIndiaNotice">
+          <strong>⚠️ India Regulatory Notice:</strong> In India, PayPal supports inward export/cross-border sales remittances only (INR domestic P2P transactions are not supported). Domestic transactions are processed through UPI and cash.
+        </div>
+
+        <div class="paypal-actions-row">
+          <button type="button" class="btn btn-secondary" id="btnTestPaypalConnection">
+            <span>🔌</span> <span id="btnTestPaypalText">Test Connection</span>
+          </button>
+          <button type="button" class="btn btn-primary" id="btnSyncPaypalTxns">
+            <span>🔄</span> <span id="btnSyncPaypalText">Sync PayPal Transactions</span>
+          </button>
+        </div>
+
+        <div id="paypalSyncResult" class="paypal-sync-result" style="display: none;"></div>
+      </div>
+
+      <!-- Action Buttons Row (WhatsApp, PDF, Copy Alert, Print) -->
+      <div>
+        <h3 style="font-size: 19px; font-weight: 800; margin-bottom: 12px; color: #FFFFFF;" id="headingActions">Quick Actions</h3>
+        <div class="action-grid">
+          <!-- WhatsApp Sharing Button -->
+          <button type="button" class="btn btn-whatsapp" id="shareWhatsAppBtn">
+            <span>💬</span>
+            <span id="shareWhatsAppBtnText">Send to WhatsApp</span>
+          </button>
+
+          <!-- Download PDF Summary -->
+          <button type="button" class="btn btn-pdf" id="downloadPdfBtn">
+            <span>📄</span>
+            <span id="downloadPdfBtnText">Download PDF Summary</span>
+          </button>
+
+          <!-- Copy Alert Text -->
+          <button type="button" class="btn btn-primary" id="copyAlertBtn">
+            <span>📋</span>
+            <span id="copyAlertBtnText">Copy Alert Text</span>
+          </button>
+
+          <!-- Native Print / Save as PDF -->
+          <button type="button" class="btn btn-secondary" id="printReportBtn">
+            <span>🖨️</span>
+            <span id="printReportBtnText">Print / Save as PDF</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Expandable Daily WhatsApp Message Preview Box -->
+      <div class="card alert-preview-card">
+        <div class="alert-preview-header" id="toggleAlertPreviewHeader" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 20px;">📱</span>
+            <strong id="alertPreviewTitle" style="font-size: 16px; color: #FFFFFF;">Daily WhatsApp & SMS Alert Message (Tap to Preview)</strong>
+          </div>
+          <button type="button" class="chip" id="previewToggleBtn" style="min-height: 34px; font-size: 13px;">Show Message</button>
+        </div>
+        <div id="alertPreviewCollapsible" style="display: none; margin-top: 14px;">
+          <div class="alert-summary-text" id="alertPreviewText" style="white-space: pre-wrap; font-family: monospace; font-size: 13.5px; background: rgba(0,0,0,0.25); padding: 14px; border-radius: 8px; border: 1px solid var(--border-color); color: #E2E8F0;">Loading alert preview...</div>
+          <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
+            <button type="button" class="btn btn-primary" id="copyAlertBtn2" style="font-size: 14px; padding: 8px 16px;">📋 Copy Message</button>
+            <button type="button" class="btn btn-whatsapp" id="shareWhatsAppBtn2" style="font-size: 14px; padding: 8px 16px;">💬 Send to WhatsApp</button>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+
+    <!-- ======================================================================
+         TAB 2: RECORDS (Full Tables with Smart Match Explanations)
+         ====================================================================== -->
+    <section class="tab-content" id="tabRecords" role="tabpanel" aria-labelledby="navRecords">
+
+      <div class="card">
+        <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 4px; color: #FFFFFF;" id="recordsHeading">Shop Records & Verification Table</h2>
+        <p style="font-size: 14.5px; color: var(--text-muted); margin-bottom: 16px;" id="recordsSub">
+          Comparing sales bills against digital and credit payment entries.
+        </p>
+
+        <!-- Search and Filters Bar -->
+        <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;">
+          <input type="text" id="searchInput" placeholder="Search by ID, amount, customer, or reference..." style="width: 100%; min-height: 48px; padding: 10px 16px; font-size: 15px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--card-surface); color: #FFFFFF;">
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="filterChipsContainer">
+            <button type="button" class="chip active" id="filterAllBtn">All (30)</button>
+            <button type="button" class="chip" id="filterMatchedBtn">Matched</button>
+            <button type="button" class="chip" id="filterUnpaidBtn">Unpaid Bills</button>
+            <button type="button" class="chip" id="filterDupBtn">Duplicates</button>
+            <button type="button" class="chip" id="filterNoBillBtn">Payment No Bill</button>
+            <button type="button" class="chip" id="filterCashBtn">Cash</button>
+          </div>
+        </div>
+
+        <!-- Sales Bills Table -->
+        <h3 style="font-size: 18px; font-weight: 700; color: #FFFFFF; margin-top: 12px;" id="headingBillsTable">Sales Bills (20 records)</h3>
+        <div class="records-table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Bill ID</th>
+                <th>Time</th>
+                <th>Amount</th>
+                <th>Mode</th>
+                <th>Customer / Ref</th>
+                <th>Status & Explanation</th>
+              </tr>
+            </thead>
+            <tbody id="tableBillsBody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Payment Records Table -->
+        <h3 style="font-size: 18px; font-weight: 700; color: #FFFFFF; margin-top: 24px;" id="headingPaymentsTable">Payment Entries (10 records)</h3>
+        <div class="records-table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Payment ID</th>
+                <th>Time</th>
+                <th>Amount</th>
+                <th>Channel</th>
+                <th>Payer / UTR</th>
+                <th>Status & Explanation</th>
+              </tr>
+            </thead>
+            <tbody id="tablePaymentsBody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ======================================================================
+         TAB 3: IMPORT (CSV Upload & Format Guide)
+         ====================================================================== -->
+    <section class="tab-content" id="tabImport" role="tabpanel" aria-labelledby="navImport">
+
+      <div class="card">
+        <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 6px; color: #FFFFFF;" id="importHeading">Import CSV Records</h2>
+        <p style="font-size: 14.5px; color: var(--text-muted); margin-bottom: 18px;" id="importSub">
+          Upload your sales records and digital payment statement CSV files for instant reconciliation.
+        </p>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 20px;">
+          <!-- Sales CSV Upload Box -->
+          <div style="background: var(--card-surface); border: 2px dashed var(--border-color); border-radius: var(--radius-sm); padding: 20px; text-align: center;">
+            <div style="font-size: 32px; margin-bottom: 8px;">🧾</div>
+            <h4 style="font-size: 17px; font-weight: 700; color: #FFFFFF;" id="lblSalesCsv">Sales Bills CSV</h4>
+            <p style="font-size: 13px; color: var(--text-muted); margin: 6px 0 14px 0;">Headers: date, time, amount, mode, customer</p>
+            <input type="file" id="fileSalesCsv" accept=".csv" style="display: none;">
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('fileSalesCsv').click()">Choose File</button>
+            <div id="salesFileName" style="font-size: 13px; color: var(--blue-accent); margin-top: 8px;">No file chosen</div>
+          </div>
+
+          <!-- Payments CSV Upload Box -->
+          <div style="background: var(--card-surface); border: 2px dashed var(--border-color); border-radius: var(--radius-sm); padding: 20px; text-align: center;">
+            <div style="font-size: 32px; margin-bottom: 8px;">💳</div>
+            <h4 style="font-size: 17px; font-weight: 700; color: #FFFFFF;" id="lblPaymentsCsv">Payment Statement CSV</h4>
+            <p style="font-size: 13px; color: var(--text-muted); margin: 6px 0 14px 0;">Headers: date, time, amount, channel, payer</p>
+            <input type="file" id="filePaymentsCsv" accept=".csv" style="display: none;">
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('filePaymentsCsv').click()">Choose File</button>
+            <div id="paymentsFileName" style="font-size: 13px; color: var(--blue-accent); margin-top: 8px;">No file chosen</div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+          <button type="button" class="btn btn-primary" id="btnRunCsvReconcile">
+            <span>⚙️</span> <span id="btnRunCsvText">Verify & Reconcile Uploaded CSVs</span>
+          </button>
+          <button type="button" class="btn btn-secondary" id="reloadSampleBtn">
+            <span>🔄</span> <span id="btnReloadSampleText">Reload Sample Records</span>
+          </button>
+        </div>
+      </div>
+
+    </section>
+
+
+    <!-- ======================================================================
+         TAB 4: SETTINGS & HONESTY LIMITS
+         ====================================================================== -->
+    <section class="tab-content" id="tabLimits" role="tabpanel" aria-labelledby="navLimits">
+
+      <!-- Settings Card -->
+      <div class="card">
+        <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 6px; color: #FFFFFF;" id="settingsTitle">Reconciliation Settings</h2>
+        <p style="font-size: 14.5px; color: var(--text-muted); margin-bottom: 16px;" id="settingsSub">
+          Adjust matching time windows and shop details to match your store.
+        </p>
+
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          <div>
+            <label style="display: block; font-size: 15px; font-weight: 700; margin-bottom: 4px;" id="lblShopName">Shop Name</label>
+            <input type="text" id="inputShopName" value="Annachi Store" style="width: 100%; min-height: 48px; padding: 10px 14px; font-size: 15px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--card-surface); color: #FFFFFF;">
+          </div>
+
+          <div>
+            <label style="display: block; font-size: 15px; font-weight: 700; margin-bottom: 4px;" id="lblWindowMin">Digital Payment Time Window (minutes)</label>
+            <input type="number" id="inputWindowMin" value="60" style="width: 100%; min-height: 48px; padding: 10px 14px; font-size: 15px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--card-surface); color: #FFFFFF;">
+            <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;" id="subWindowMin">Default: 60 mins. Maximum allowable time gap between bill and payment arrival.</p>
+          </div>
+
+          <div>
+            <label style="display: block; font-size: 15px; font-weight: 700; margin-bottom: 4px;" id="lblDupMin">Duplicate Detection Window (minutes)</label>
+            <input type="number" id="inputDupMin" value="5" style="width: 100%; min-height: 48px; padding: 10px 14px; font-size: 15px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--card-surface); color: #FFFFFF;">
+            <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;" id="subDupMin">Default: 5 mins. Same amount entered twice within this time is flagged as duplicate.</p>
+          </div>
+
+          <div>
+            <label style="display: block; font-size: 15px; font-weight: 700; margin-bottom: 4px;" id="lblCreditDays">Credit Payment Window (days)</label>
+            <input type="number" id="inputCreditDays" value="7" style="width: 100%; min-height: 48px; padding: 10px 14px; font-size: 15px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--card-surface); color: #FFFFFF;">
+            <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;" id="subCreditDays">Default: 7 days. Allowable window for credit payments to settle.</p>
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 8px;">
+            <button type="button" class="btn btn-primary" id="saveSettingsBtn">Save & Re-run</button>
+            <button type="button" class="btn btn-secondary" id="resetSettingsBtn">Reset Defaults</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Diagnostic Test Runner Card -->
+      <div class="card">
+        <h3 style="font-size: 19px; font-weight: 800; color: #FFFFFF; margin-bottom: 6px;">Diagnostics & Automated Verification</h3>
+        <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 12px;">Run all 28 automated rule tests for matching, duplicate detection, and parsing edge cases.</p>
+        <button type="button" class="btn btn-secondary" id="runTestsUiBtn">
+          <span>🧪</span> Run 28 Diagnostic Tests
+        </button>
+        <pre id="testOutputBox" style="display: none; margin-top: 12px; padding: 14px; background: rgba(0,0,0,0.3); border-radius: var(--radius-sm); font-size: 13px; color: #A7F3D0; white-space: pre-wrap; font-family: monospace;"></pre>
+      </div>
+
+      <!-- Honesty Rules & System Limits -->
+      <div class="card">
+        <h3 style="font-size: 19px; font-weight: 800; color: #FFFFFF; margin-bottom: 8px;" id="limitsHeading">Honesty & System Boundaries</h3>
+        <ul style="padding-left: 20px; font-size: 14.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 8px;" id="limitsList">
+          <li><strong>Unrecorded cash is invisible:</strong> If cash enters the drawer without a written bill, UNIFY cannot verify it.</li>
+          <li><strong>Flags are possibilities:</strong> Notifications are alerts for the owner to double-check, never definitive accusations.</li>
+          <li><strong>No tax or legal advice:</strong> UNIFY is purely an alert tool for shop owners.</li>
+          <li><strong>Device privacy:</strong> Uploaded CSV records and store settings remain in your browser storage.</li>
+        </ul>
+        <button type="button" class="btn btn-secondary" id="clearDataBtn" style="margin-top: 16px; border-color: rgba(239, 68, 68, 0.4); color: #FCA5A5;">
+          <span>🗑️</span> <span id="btnClearDataText">Clear Local Storage & Reset</span>
+        </button>
+      </div>
+
+    </section>
+
+  </main>
+
+
+  <!-- Modal for Alert Detail Actions -->
+  <div class="modal-overlay" id="alertModal" role="dialog" aria-modal="true" aria-labelledby="modalAlertTitle">
+    <div class="modal-box">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="font-size: 20px; font-weight: 800; color: #FFFFFF;" id="modalAlertTitle">Alert Details</h3>
+        <button type="button" id="closeModalBtn" style="background: none; border: none; font-size: 28px; cursor: pointer; color: var(--text-muted);" aria-label="Close modal">&times;</button>
+      </div>
+      <div id="modalAlertBody" style="font-size: 15.5px; line-height: 1.5; color: #E2E8F0;"></div>
+      <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
+        <button type="button" class="btn btn-primary" id="modalActionBtn">View in Records</button>
+        <button type="button" class="btn btn-secondary" id="modalDismissBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Fixed Bottom Navigation (Min 48px tap targets, 72px height) -->
+  <nav class="bottom-nav" role="tablist">
+    <button type="button" class="nav-item active" id="navToday" role="tab" aria-selected="true" data-tab="tabToday">
+      <span class="nav-icon" aria-hidden="true">📊</span>
+      <span id="navTodayText">Today</span>
+    </button>
+    <button type="button" class="nav-item" id="navRecords" role="tab" aria-selected="false" data-tab="tabRecords">
+      <span class="nav-icon" aria-hidden="true">📑</span>
+      <span id="navRecordsText">Records</span>
+    </button>
+    <button type="button" class="nav-item" id="navImport" role="tab" aria-selected="false" data-tab="tabImport">
+      <span class="nav-icon" aria-hidden="true">📥</span>
+      <span id="navImportText">Import</span>
+    </button>
+    <button type="button" class="nav-item" id="navLimits" role="tab" aria-selected="false" data-tab="tabLimits">
+      <span class="nav-icon" aria-hidden="true">⚙️</span>
+      <span id="navLimitsText">Settings</span>
+    </button>
+  </nav>
+
+
+  <!-- ======================================================================
+       JAVASCRIPT: THREE.JS 3D RING, SMART MATCHING HIERARCHY, PAYPAL SYNC,
+       FULL LOCALIZATION (ENGLISH DEFAULT), PDF EXPORT & AUTOMATED TESTS
+       ====================================================================== -->
+  <script>
+    // Global settings object holding tunable values
+    const SETTINGS = {
+      WINDOW_MIN: 60,     // Digital payment matches a bill if within 60 mins (tunable)
+      DUP_MIN: 5,         // Same-amount bills within 5 mins flagged as duplicate
+      CREDIT_MAX_DAYS: 7, // Credit payment can arrive up to 7 days after the bill
+      shopName: "Annachi Store",
+      isSampleData: true
+    };
+
+    // Mode mappings mapping user names/aliases to clean internal categories
+    const MODE_ALIASES = {
+      "cash": "cash",
+      "panam": "cash",
+      "upi": "upi",
+      "gpay": "upi",
+      "googlepay": "upi",
+      "phonepe": "upi",
+      "paytm": "upi",
+      "qr": "upi",
+      "marketplace": "marketplace",
+      "payout": "marketplace",
+      "online": "marketplace",
+      "swiggy": "marketplace",
+      "zomato": "marketplace",
+      "credit": "credit",
+      "khata": "credit",
+      "udhar": "credit",
+      "kadam": "credit",
+      "paypal": "paypal"
+    };
+
+    // =========================================================================
+    // 1. SYNTHETIC SAMPLE DATA (With transaction ID, UTR, ref numbers & benchmarks)
+    // =========================================================================
+    const BASE_DATE_STR = "2026-10-26";
+
+    // Helper function to create Date object on 26 Oct 2026 from 24h "HH:MM"
+    function makeDate(timeStr, dayOffset = 0) {
+      const parts = timeStr.split(":");
+      const hours = parseInt(parts[0], 10);
+      const minutes = parseInt(parts[1], 10);
+      return new Date(2026, 9, 26 + dayOffset, hours, minutes, 0, 0); // Month 9 is October
+    }
+
+    // 20 Bills with planted benchmark cases + Reference IDs for Level 1 & 2 matching
+    const SAMPLE_BILLS = [
+      { id: "B101", time: makeDate("08:30"), amount: 60, mode: "cash", customer: "", ref: "" },
+      { id: "B102", time: makeDate("09:15"), amount: 140, mode: "cash", customer: "", ref: "" },
+      { id: "B103", time: makeDate("10:00"), amount: 50, mode: "cash", customer: "", ref: "" },
+      { id: "B104", time: makeDate("10:30"), amount: 820, mode: "credit", customer: "Ramesh", ref: "" }, // Planted: Ramesh unpaid credit
+      { id: "B105", time: makeDate("11:05"), amount: 250, mode: "upi", customer: "", ref: "UPI250A" }, // Planted duplicate 1 (Matches P3)
+      { id: "B106", time: makeDate("11:06"), amount: 250, mode: "upi", customer: "", ref: "" }, // Planted duplicate 2 (No payment)
+      { id: "B107", time: makeDate("11:45"), amount: 180, mode: "cash", customer: "", ref: "" },
+      { id: "B108", time: makeDate("12:15"), amount: 340, mode: "upi", customer: "", ref: "UTR883901" }, // Matches P4 via UTR
+      { id: "B109", time: makeDate("13:00"), amount: 95, mode: "cash", customer: "", ref: "" },
+      { id: "B110", time: makeDate("13:15"), amount: 1200, mode: "credit", customer: "Lakshmi", ref: "" }, // Planted: Paid later by Lakshmi
+      { id: "B111", time: makeDate("14:00"), amount: 560, mode: "marketplace", customer: "", ref: "SWG-5601" }, // Matches P5 via Order Ref
+      { id: "B112", time: makeDate("14:45"), amount: 320, mode: "cash", customer: "", ref: "" },
+      { id: "B113", time: makeDate("15:30"), amount: 190, mode: "upi", customer: "", ref: "" }, // Matches P6 by Amount & Time
+      { id: "B114", time: makeDate("16:45"), amount: 410, mode: "upi", customer: "", ref: "B114" }, // Matches P7 via Bill ID in note
+      { id: "B115", time: makeDate("17:10"), amount: 75, mode: "cash", customer: "", ref: "" },
+      { id: "B116", time: makeDate("17:50"), amount: 680, mode: "marketplace", customer: "", ref: "ZOM-6802" }, // Matches P9 via Ref
+      { id: "B117", time: makeDate("18:40"), amount: 150, mode: "upi", customer: "", ref: "" }, // Matches P1 by Amount & Time
+      { id: "B118", time: makeDate("19:30"), amount: 210, mode: "cash", customer: "", ref: "" },
+      { id: "B119", time: makeDate("20:20"), amount: 900, mode: "upi", customer: "", ref: "UPI900X" }, // Matches P10 via Ref
+      { id: "B120", time: makeDate("21:15"), amount: 110, mode: "cash", customer: "", ref: "" }
+    ];
+
+    // 10 Payments with UTR and reference numbers
+    const SAMPLE_PAYMENTS = [
+      { id: "P1", time: makeDate("18:45"), amount: 150, channel: "upi", payer: "", ref: "" }, // Matches B117 (Time & Amount)
+      { id: "P2", time: makeDate("16:12"), amount: 450, channel: "upi", payer: "", ref: "UTR450999" }, // Planted: Payment with NO bill
+      { id: "P3", time: makeDate("11:06"), amount: 250, channel: "upi", payer: "", ref: "UPI250A" }, // Matches B105
+      { id: "P4", time: makeDate("12:18"), amount: 340, channel: "upi", payer: "", ref: "UTR883901" }, // Matches B108 (Level 1 Exact UTR)
+      { id: "P5", time: makeDate("14:05"), amount: 560, channel: "marketplace", payer: "", ref: "SWG-5601" }, // Matches B111 (Level 1 Ref)
+      { id: "P6", time: makeDate("15:32"), amount: 190, channel: "upi", payer: "", ref: "" }, // Matches B113 (Level 3 Time & Amount)
+      { id: "P7", time: makeDate("16:48"), amount: 410, channel: "upi", payer: "", ref: "B114" }, // Matches B114 (Level 2 Bill ID)
+      { id: "P8", time: makeDate("18:10"), amount: 1200, channel: "upi", payer: "Lakshmi", ref: "" }, // Matches B110 credit bill
+      { id: "P9", time: makeDate("18:00"), amount: 680, channel: "marketplace", payer: "", ref: "ZOM-6802" }, // Matches B116 (Level 1 Ref)
+      { id: "P10", time: makeDate("20:22"), amount: 900, channel: "upi", payer: "", ref: "UPI900X" } // Matches B119 (Level 1 Ref)
+    ];
+
+
+    // =========================================================================
+    // 2. SMART RECONCILIATION ENGINE (LEVELS 1-4)
+    // =========================================================================
+
+    // Time difference in minutes
+    function diffMinutes(d1, d2) {
+      return Math.round(Math.abs(d1.getTime() - d2.getTime()) / (1000 * 60));
+    }
+
+    // Formats Date to 12-hour string (e.g. "4:12 PM")
+    function formatTime(date) {
+      if (!(date instanceof Date) || isNaN(date.getTime())) return "--:--";
+      let hours = date.getHours();
+      const minutes = date.getMinutes();
+      const ampm = hours >= 12 ? "PM" : "AM";
+      hours = hours % 12;
+      hours = hours ? hours : 12;
+      const minStr = minutes < 10 ? "0" + minutes : minutes;
+      return `${hours}:${minStr} ${ampm}`;
+    }
+
+    // Formats currency nicely
+    function formatMoney(amount, lang = "en") {
+      const formatted = Number(amount).toLocaleString("en-IN");
+      return `₹${formatted}`;
+    }
+
+    /**
+     * Smart 4-Level Reconciliation Engine:
+     * Level 1: Exact Match on Transaction ID / UTR / Reference number + Amount
+     * Level 2: Bill Number Match on payment reference / remarks + Amount
+     * Level 3: Smart Time & Amount Match within WINDOW_MIN (or Credit Name match)
+     * Level 4: Manual Verification / Duplicate detection
+     */
+    function reconcile(billsInput, paymentsInput, settings = SETTINGS) {
+      const bills = billsInput.map(b => ({ ...b, time: new Date(b.time), matchReason: "" }));
+      const payments = paymentsInput.map(p => ({ ...p, time: new Date(p.time), used: false, matchedBillId: null, matchReason: "" }));
+
+      bills.sort((a, b) => a.time.getTime() - b.time.getTime());
+      payments.sort((a, b) => a.time.getTime() - b.time.getTime());
+
+      const matches = [];
+      const matchedBillIds = new Set();
+      let cashUnverified = 0;
+
+      // Count cash bills
+      for (let i = 0; i < bills.length; i++) {
+        if (bills[i].mode === "cash") {
+          cashUnverified++;
+          bills[i].matchReason = "Cash bill (cannot verify digitally)";
+        }
+      }
+
+      // LEVEL 1: Exact Match on Transaction ID / UTR / Reference Number
+      for (let i = 0; i < bills.length; i++) {
+        const bill = bills[i];
+        if (bill.mode === "cash" || matchedBillIds.has(bill.id)) continue;
+        const billRef = (bill.ref || "").trim().toLowerCase();
+        if (!billRef) continue;
+
+        for (let j = 0; j < payments.length; j++) {
+          const pay = payments[j];
+          if (pay.used) continue;
+          if (pay.amount !== bill.amount) continue;
+
+          const payRef = (pay.ref || "").trim().toLowerCase();
+          if (payRef && payRef === billRef) {
+            pay.used = true;
+            pay.matchedBillId = bill.id;
+            matchedBillIds.add(bill.id);
+            const reason = "Reference / UTR matched";
+            bill.matchReason = reason;
+            pay.matchReason = reason;
+            matches.push({
+              billId: bill.id,
+              paymentId: pay.id,
+              level: 1,
+              reason,
+              bill,
+              payment: pay
+            });
+            break;
+          }
+        }
+      }
+
+      // LEVEL 2: Bill Number Match in Payment Reference / Remarks
+      for (let i = 0; i < bills.length; i++) {
+        const bill = bills[i];
+        if (bill.mode === "cash" || matchedBillIds.has(bill.id)) continue;
+        const billIdClean = bill.id.trim().toLowerCase();
+
+        for (let j = 0; j < payments.length; j++) {
+          const pay = payments[j];
+          if (pay.used) continue;
+          if (pay.amount !== bill.amount) continue;
+
+          const payRef = (pay.ref || "").trim().toLowerCase();
+          if (payRef && (payRef === billIdClean || payRef.includes(billIdClean))) {
+            pay.used = true;
+            pay.matchedBillId = bill.id;
+            matchedBillIds.add(bill.id);
+            const reason = "Bill ID matched in payment note";
+            bill.matchReason = reason;
+            pay.matchReason = reason;
+            matches.push({
+              billId: bill.id,
+              paymentId: pay.id,
+              level: 2,
+              reason,
+              bill,
+              payment: pay
+            });
+            break;
+          }
+        }
+      }
+
+      // LEVEL 3A: Digital Bills (UPI, Marketplace, PayPal) Matching by Closest Time Gap within WINDOW_MIN
+      const candidates = [];
+      for (let i = 0; i < bills.length; i++) {
+        const bill = bills[i];
+        if (bill.mode !== "upi" && bill.mode !== "marketplace" && bill.mode !== "paypal") continue;
+        if (matchedBillIds.has(bill.id)) continue;
+
+        for (let j = 0; j < payments.length; j++) {
+          const pay = payments[j];
+          if (pay.used) continue;
+          if (pay.amount !== bill.amount) continue;
+          if (pay.channel !== bill.mode) continue;
+
+          const gap = diffMinutes(bill.time, pay.time);
+          if (gap <= settings.WINDOW_MIN) {
+            candidates.push({ bill, pay, gap });
+          }
+        }
+      }
+
+      // Sort candidate pairs by smallest time gap first (closest in time)
+      candidates.sort((a, b) => a.gap - b.gap || a.bill.time.getTime() - b.bill.time.getTime());
+
+      for (let k = 0; k < candidates.length; k++) {
+        const c = candidates[k];
+        if (matchedBillIds.has(c.bill.id) || c.pay.used) continue;
+        c.pay.used = true;
+        c.pay.matchedBillId = c.bill.id;
+        matchedBillIds.add(c.bill.id);
+        const reason = `Amount & time matched (${c.gap} min gap)`;
+        c.bill.matchReason = reason;
+        c.pay.matchReason = reason;
+        matches.push({
+          billId: c.bill.id,
+          paymentId: c.pay.id,
+          level: 3,
+          minutesApart: c.gap,
+          reason,
+          bill: c.bill,
+          payment: c.pay
+        });
+      }
+
+      // LEVEL 3B: Credit Bills (Customer Name Matching + Payment on or after bill)
+      for (let i = 0; i < bills.length; i++) {
+        const bill = bills[i];
+        if (bill.mode !== "credit") continue;
+        if (matchedBillIds.has(bill.id)) continue;
+
+        const billCustomerClean = (bill.customer || "").trim().toLowerCase();
+        if (!billCustomerClean) continue;
+
+        let bestPayment = null;
+
+        for (let j = 0; j < payments.length; j++) {
+          const pay = payments[j];
+          if (pay.used) continue;
+          if (pay.amount !== bill.amount) continue;
+
+          const payerClean = (pay.payer || "").trim().toLowerCase();
+          if (payerClean !== billCustomerClean) continue;
+
+          // Payment must be at or after the bill time
+          if (pay.time.getTime() < bill.time.getTime()) continue;
+
+          // Payment must be within CREDIT_MAX_DAYS
+          const daysDiff = (pay.time.getTime() - bill.time.getTime()) / (1000 * 60 * 60 * 24);
+          if (daysDiff > settings.CREDIT_MAX_DAYS) continue;
+
+          bestPayment = pay;
+          break;
+        }
+
+        if (bestPayment) {
+          bestPayment.used = true;
+          bestPayment.matchedBillId = bill.id;
+          matchedBillIds.add(bill.id);
+          const reason = `Customer name matched (${bill.customer})`;
+          bill.matchReason = reason;
+          bestPayment.matchReason = reason;
+          matches.push({
+            billId: bill.id,
+            paymentId: bestPayment.id,
+            level: 3,
+            reason,
+            bill,
+            payment: bestPayment
+          });
+        }
+      }
+
+      // LEVEL 4: Classification of Leftovers & Duplicate Verification
+      const paymentsWithNoBill = [];
+      for (let j = 0; j < payments.length; j++) {
+        const pay = payments[j];
+        if (!pay.used && pay.channel !== "cash") {
+          pay.matchReason = "Payment with no bill";
+          paymentsWithNoBill.push(pay);
+        }
+      }
+
+      const possibleDuplicates = [];
+      const billsWithNoPayment = [];
+      const duplicateBillIds = new Set();
+
+      for (let i = 0; i < bills.length; i++) {
+        const bill = bills[i];
+        if (bill.mode === "cash") continue;
+        if (matchedBillIds.has(bill.id)) continue;
+
+        let foundDuplicate = false;
+        for (let k = 0; k < bills.length; k++) {
+          const other = bills[k];
+          if (other.id === bill.id) continue;
+          if (other.amount === bill.amount && other.mode === bill.mode) {
+            const gap = diffMinutes(bill.time, other.time);
+            if (gap <= settings.DUP_MIN && matchedBillIds.has(other.id)) {
+              possibleDuplicates.push({ first: other, second: bill });
+              duplicateBillIds.add(bill.id);
+              bill.matchReason = `Possible duplicate of ${other.id}`;
+              foundDuplicate = true;
+              break;
+            }
+          }
+        }
+
+        if (!foundDuplicate) {
+          bill.matchReason = "Bill with no payment";
+          billsWithNoPayment.push(bill);
+        }
+      }
+
+      const matchedDigital = matchedBillIds.size;
+      const flagged = paymentsWithNoBill.length + billsWithNoPayment.length + possibleDuplicates.length;
+
+      // Calculate financial totals for simple cards
+      const totalBillsAmount = bills.reduce((sum, b) => sum + (b.amount || 0), 0);
+      const totalPaymentsReceived = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+
+      return {
+        summary: {
+          bills: bills.length,
+          payments: payments.length,
+          matchedDigital,
+          cashUnverified,
+          flagged,
+          totalBillsAmount,
+          totalPaymentsReceived,
+          pendingBillsCount: billsWithNoPayment.length,
+          duplicatesCount: possibleDuplicates.length
+        },
+        paymentsWithNoBill,
+        billsWithNoPayment,
+        possibleDuplicates,
+        matches,
+        duplicateBillIds,
+        matchedBillIds,
+        allBills: bills,
+        allPayments: payments,
+        skipped: []
+      };
+    }
+
+
+    // =========================================================================
+    // 3. COMPLETE LOCALIZATION DICTIONARY (DEFAULT: ENGLISH, SWITCHABLE TO TAMIL)
+    // =========================================================================
+
+    const TEXT = {
+      en: {
+        appName: "UNIFY",
+        sampleBanner: "Sample data written by the team to test the logic. Not real shop records.",
+        navToday: "Today",
+        navRecords: "Records",
+        navImport: "Import",
+        navLimits: "Settings",
+        shopSubtitleSuffix: "Daily Reconciliation",
+        langToggleText: "தமிழ்",
+
+        // Hero & Main Dashboard
+        heroTitle: "Daily Reconciliation Status",
+        heroSubtitle: "26 Oct 2026 • Sales & Payment Audit",
+        itemsToReview: "Items to Review",
+        needsAttention: "Needs Attention",
+        allClearBadge: "All Clear",
+        recordsCheckedSummary: (count) => `Total Records Checked: ${count}`,
+
+        // 3D Progress Ring
+        threeDTitle: "3D Reconciliation Progress",
+        threeDSubtitle: "Interactive spatial verification model",
+        threeDBadge: "Three.js WebGL",
+        threeDLabel: "Matched",
+        threeDDetail: (m, t) => `${m} / ${t} Digital Bills`,
+        legendMatched: (count) => `Matched (${count})`,
+        legendFlagged: (count) => `Needs Review (${count})`,
+        legendCash: (count) => `Cash Unverified (${count})`,
+        threeDHint: "Drag or move cursor to tilt 3D progress ring",
+
+        // Distribution
+        distTitle: "Payment Channels",
+        distSub: "Breakdown of today's incoming revenue sources",
+        distNotice: "Digital channels are cross-verified automatically; unrecorded cash remains invisible.",
+
+        // 6 Big Cards
+        lblTotalBills: "Total Bills",
+        lblTotalAmount: "Total Bill Amount",
+        lblPaymentsReceived: "Payments Received",
+        lblMatchedBills: "Matched Bills",
+        lblPendingBills: "Pending Bills",
+        lblDuplicates: "Possible Duplicates",
+        cashBillsNote: (cash) => `Cash Bills: ${cash} (Cash cannot be verified digitally)`,
+
+        // Alerts Section
+        headingAlerts: "Exceptions Requiring Review",
+        viewAllAlerts: (count) => `View All Alerts (${count})`,
+        alertNoBillTitle: "Payment Not Found",
+        alertNoPaymentTitle: "Payment Pending",
+        alertDuplicateTitle: "Duplicate Payment",
+
+        // Short 2-line explanations
+        descNoBill: (p) => `₹${p.amount} arrived via ${p.channel.toUpperCase()} at ${formatTime(p.time)}. No corresponding sales bill found in ledger.`,
+        descNoPayment: (b) => `Bill #${b.id} (${b.customer || "Customer"}): ₹${b.amount} credit recorded, but no payment has arrived yet.`,
+        descDuplicate: (f, s) => `₹${s.amount} logged twice within 5 mins (${f.id} & ${s.id}). Only 1 payment received.`,
+
+        // Alert Actions
+        actionCheckPayment: "Check Payment",
+        actionRemindCustomer: "Remind Customer",
+        actionCheckDuplicate: "View Details",
+
+        // PayPal Section
+        paypalTitle: "PayPal International Gateway",
+        paypalSubtitle: "Cross-border export reconciliation & developer API sync",
+        paypalStatusBadge: "● Sandbox Ready",
+        paypalIndiaNotice: "In India, PayPal supports inward export/cross-border sales remittances only (INR domestic P2P transactions are not supported). Domestic transactions are processed through UPI and cash.",
+        btnTestPaypalText: "Test Connection",
+        btnSyncPaypalText: "Sync PayPal Transactions",
+
+        // Quick Actions
+        headingActions: "Quick Actions",
+        sendWhatsApp: "Send to WhatsApp",
+        downloadPdf: "Download PDF Summary",
+        copyAlert: "Copy Alert Text",
+        copied: "Copied to Clipboard!",
+        printPdf: "Print / Save as PDF",
+
+        // Alert Preview Box
+        alertPreviewTitle: "Daily WhatsApp & SMS Alert Message (Tap to Preview)",
+        allClear: "All digital bills and payments matched. No discrepancies detected.",
+        alertDisclaimer: "Note: these are possible mismatches only. Unrecorded cash cannot be seen.",
+
+        // Status Pills
+        statusMatched: "Matched",
+        statusCash: "Cash",
+        statusUnpaid: "Unpaid",
+        statusDuplicate: "Duplicate",
+        statusNoBill: "No Bill",
+
+        // Records Tab
+        recordsHeading: "Shop Records & Verification Table",
+        recordsSub: "Comparing sales bills against digital and credit payment entries.",
+        headingBillsTable: (c) => `Sales Bills (${c} records)`,
+        headingPaymentsTable: (c) => `Payment Entries (${c} records)`,
+
+        // Import Tab
+        importHeading: "Import CSV Records",
+        importSub: "Upload your sales records and digital payment statement CSV files for instant reconciliation.",
+        lblSalesCsv: "Sales Bills CSV",
+        lblPaymentsCsv: "Payment Statement CSV",
+        btnRunCsvText: "Verify & Reconcile Uploaded CSVs",
+        btnReloadSampleText: "Reload Sample Records",
+
+        // Settings Page
+        settingsTitle: "Reconciliation Settings",
+        settingsSub: "Adjust matching time windows and shop details to match your store.",
+        lblShopName: "Shop Name",
+        lblWindowMin: "Digital Payment Time Window (minutes)",
+        subWindowMin: "Default: 60 mins. Maximum allowable time gap between bill and payment arrival.",
+        lblDupMin: "Duplicate Detection Window (minutes)",
+        subDupMin: "Default: 5 mins. Same amount entered twice within this time is flagged as duplicate.",
+        lblCreditDays: "Credit Payment Window (days)",
+        subCreditDays: "Default: 7 days. Allowable window for credit payments to settle.",
+        saveSettings: "Save & Re-run",
+        resetSettings: "Reset Defaults",
+        limitsHeading: "Honesty & System Boundaries",
+        btnClearDataText: "Clear Local Storage & Reset"
+      },
+      ta: {
+        appName: "UNIFY",
+        sampleBanner: "மாதிரி தரவு மட்டுமே. உண்மையான கடையின் கணக்கு அல்ல.",
+        navToday: "இன்று",
+        navRecords: "பதிவுகள்",
+        navImport: "கோப்புகள்",
+        navLimits: "அமைப்புகள்",
+        shopSubtitleSuffix: "கணக்கு சரிபார்ப்பு",
+        langToggleText: "English",
+
+        // Hero & Main Dashboard
+        heroTitle: "கணக்கு சரிபார்ப்பு நிலை",
+        heroSubtitle: "26 Oct 2026 • இன்றைய வரவு செலவு சரிபார்ப்பு",
+        itemsToReview: "சரிபார்க்க வேண்டியவை",
+        needsAttention: "கவனம் தேவை",
+        allClearBadge: "அனைத்தும் சரி",
+        recordsCheckedSummary: (count) => `மொத்த பதிவுகள்: ${count}`,
+
+        // 3D Progress Ring
+        threeDTitle: "முப்பரிமாண சரிபார்ப்பு வளையம்",
+        threeDSubtitle: "கணக்கு சரிபார்ப்பு முன்னேற்ற மாதிரி",
+        threeDBadge: "Three.js WebGL",
+        threeDLabel: "பொருந்தியது",
+        threeDDetail: (m, t) => `${t}-ல் ${m} டிஜிட்டல் பில்கள்`,
+        legendMatched: (count) => `பொருந்தியது (${count})`,
+        legendFlagged: (count) => `கவனம் தேவை (${count})`,
+        legendCash: (count) => `ரொக்கம் சரிபார்க்க இயலாது (${count})`,
+        threeDHint: "வளையத்தை சுழற்ற தொடுங்கள் அல்லது சுட்டியை நகர்த்துங்கள்",
+
+        // Distribution
+        distTitle: "பணப் பரிவர்த்தனை வழிகள்",
+        distSub: "இன்றைய விற்பனை வரவுகளின் பிரிவு",
+        distNotice: "டிஜிட்டல் வரவுகள் தானாக சரிபார்க்கப்படுகின்றன; எழுதப்படாத ரொக்கம் கணக்கில் வராது.",
+
+        // 6 Big Cards
+        lblTotalBills: "மொத்த பில்கள்",
+        lblTotalAmount: "மொத்த பில் தொகை",
+        lblPaymentsReceived: "வந்த பணம்",
+        lblMatchedBills: "பொருந்திய பில்கள்",
+        lblPendingBills: "நிலுவை பில்கள்",
+        lblDuplicates: "இரட்டைப் பதிவு",
+        cashBillsNote: (cash) => `ரொக்க பில்கள்: ${cash} (ரொக்கத்தை டிஜிட்டல் முறையில் சரிபார்க்க முடியாது)`,
+
+        // Alerts Section
+        headingAlerts: "சரிபார்க்க வேண்டிய எச்சரிக்கைகள்",
+        viewAllAlerts: (count) => `அனைத்து எச்சரிக்கைகள் (${count})`,
+        alertNoBillTitle: "பில் இல்லாத பணம்",
+        alertNoPaymentTitle: "பணம் வராத பில்",
+        alertDuplicateTitle: "இரட்டைப் பதிவு",
+
+        // Short 2-line explanations
+        descNoBill: (p) => `இந்த ₹${p.amount} தொகை ${formatTime(p.time)}-ல் UPI மூலம் வந்துள்ளது. ஆனால் இதற்கான விற்பனை பில் ஏட்டில் இல்லை.`,
+        descNoPayment: (b) => `பில் #${b.id} (${b.customer || "வாடிக்கையாளர்"}): ₹${b.amount} கடன் பில் போடப்பட்டது. ஆனால் இன்னும் பணம் வரவில்லை.`,
+        descDuplicate: (f, s) => `₹${s.amount} தொகை 5 நிமிடத்திற்குள் இருமுறை (${f.id} & ${s.id}) பதிவாகியுள்ளது. ஒரு பணம் மட்டுமே வந்துள்ளது.`,
+
+        // Alert Actions
+        actionCheckPayment: "பணம் சரிபார்க்க",
+        actionRemindCustomer: "நினைவூட்ட",
+        actionCheckDuplicate: "விவரம் பார்க்க",
+
+        // PayPal Section
+        paypalTitle: "பேபால் சர்வதேச பணப் பரிவர்த்தனை",
+        paypalSubtitle: "வெளிநாட்டு ஏற்றுமதி வரவுகள் & API ஒத்திசைவு",
+        paypalStatusBadge: "● Sandbox தயார்",
+        paypalIndiaNotice: "இந்தியாவில் பேபால் சர்வதேச ஏற்றுமதி வரவுகளுக்கு மட்டுமே பொருந்தும் (உள்நாட்டு UPI/ரொக்கம் தனிப் பிரிவாக சரிபார்க்கப்படுகிறது).",
+        btnTestPaypalText: "இணைப்பு சோதனை",
+        btnSyncPaypalText: "பேபால் வரவுகளை ஒத்திசைக்க",
+
+        // Quick Actions
+        headingActions: "செயல்கள்",
+        sendWhatsApp: "WhatsApp-ல் அனுப்ப",
+        downloadPdf: "PDF அறிக்கை பதிவிறக்க",
+        copyAlert: "செய்தியை நகலெடுக்க",
+        copied: "நகலெடுக்கப்பட்டது!",
+        printPdf: "அச்சு / PDF சேமிக்க",
+
+        // Alert Preview Box
+        alertPreviewTitle: "தினசரி WhatsApp & SMS செய்தி முன்னோட்டம் (பார்க்க தட்டவும்)",
+        allClear: "அனைத்து டிஜிட்டல் பில்களும் பணப் பரிவர்த்தனைகளும் சரியாக பொருந்திவிட்டன! முரண்பாடுகள் இல்லை.",
+        alertDisclaimer: "குறிப்பு: இவை சாத்தியமான முரண்பாடுகள் மட்டுமே. குறிக்கப்படாத ரொக்கத்தை கணக்கிட முடியாது.",
+
+        // Status Pills
+        statusMatched: "பொருந்தியது",
+        statusCash: "ரொக்கம்",
+        statusUnpaid: "பணம் வரவில்லை",
+        statusDuplicate: "இரட்டைப் பதிவு",
+        statusNoBill: "பில் இல்லை",
+
+        // Records Tab
+        recordsHeading: "கடை கணக்கு பதிவுகள்",
+        recordsSub: "விற்பனை பில்கள் மற்றும் பணப் பரிவர்த்தனைகள் ஒப்பிடப்பட்டு நிலை காட்டப்படுகிறது.",
+        headingBillsTable: (c) => `விற்பனை பில்கள் (${c} பதிவுகள்)`,
+        headingPaymentsTable: (c) => `பணப் பதிவுகள் (${c} பதிவுகள்)`,
+
+        // Import Tab
+        importHeading: "கோப்புகளை பதிவேற்றுக",
+        importSub: "விற்பனை மற்றும் பணப் பரிவர்த்தனை CSV கோப்புகளை பதிவேற்றி சரிபார்க்கவும்.",
+        lblSalesCsv: "விற்பனை பில்கள் CSV",
+        lblPaymentsCsv: "பணப் பதிவுகள் CSV",
+        btnRunCsvText: "பதிவேற்றிய கோப்புகளை சரிபார்",
+        btnReloadSampleText: "மாதிரி பதிவுகளை மீண்டும் ஏற்று",
+
+        // Settings Page
+        settingsTitle: "சரிபார்ப்பு அமைப்புகள்",
+        settingsSub: "உங்கள் கடைக்கு ஏற்ப நேர அவகாசங்களை இங்கே மாற்றிக்கொள்ளலாம்.",
+        lblShopName: "கடையின் பெயர்",
+        lblWindowMin: "டிஜிட்டல் பணம் பொருந்தும் கால இடைவெளி (நிமிடங்கள்)",
+        subWindowMin: "வழக்கமானது: 60 நிமிடங்கள். பில் போட்ட நேரத்திலிருந்து பணம் வர அனுமதிக்கப்படும் அதிகபட்ச இடைவெளி.",
+        lblDupMin: "இரட்டைப் பதிவு கண்டறியும் நேரம் (நிமிடங்கள்)",
+        subDupMin: "வழக்கமானது: 5 நிமிடங்கள். ஒரே தொகை இந்த நிமிடங்களுக்குள் இருமுறை வந்தால் எச்சரிக்கும்.",
+        lblCreditDays: "கடன் பணம் வர வேண்டிய கால அவகாசம் (நாட்கள்)",
+        subCreditDays: "வழக்கமானது: 7 நாட்கள். கடன் பில் போட்ட பிறகு பணம் வர அனுமதிக்கப்படும் நாட்கள்.",
+        saveSettings: "சேமித்து மீண்டும் சரிபார்",
+        resetSettings: "மீட்டமை",
+        limitsHeading: "வரம்புகள் & நேர்மை விதிகள்",
+        btnClearDataText: "தரவை அழித்து மீட்டமை"
+      }
+    };
+
+    // Builds concise WhatsApp and clipboard alert text
+    function buildAlertText(result, lang = "en") {
+      const t = TEXT[lang] || TEXT.en;
+      const lines = [];
+      const shop = SETTINGS.shopName || "Annachi Store";
+      const dateStr = "26 Oct 2026";
+
+      lines.push(`*${shop} — ${t.appName} ${t.shopSubtitleSuffix}*`);
+      lines.push(`📅 ${dateStr} | ⚠️ ${t.itemsToReview}: ${result.summary.flagged}`);
+      lines.push("");
+
+      if (result.summary.flagged === 0) {
+        lines.push(`✓ ${t.allClear}`);
+      } else {
+        // Red: Payment with no bill
+        for (let i = 0; i < result.paymentsWithNoBill.length; i++) {
+          const p = result.paymentsWithNoBill[i];
+          lines.push(`🔴 *${t.alertNoBillTitle}:* ₹${p.amount} (${formatTime(p.time)}, ${p.channel.toUpperCase()})`);
+          lines.push(`   ${t.descNoBill(p)}`);
+        }
+        // Amber: Bill with no payment
+        for (let i = 0; i < result.billsWithNoPayment.length; i++) {
+          const b = result.billsWithNoPayment[i];
+          lines.push(`🟡 *${t.alertNoPaymentTitle}:* #${b.id} — ₹${b.amount} (${b.customer || "Credit"})`);
+          lines.push(`   ${t.descNoPayment(b)}`);
+        }
+        // Blue: Possible duplicate
+        for (let i = 0; i < result.possibleDuplicates.length; i++) {
+          const d = result.possibleDuplicates[i];
+          lines.push(`🔵 *${t.alertDuplicateTitle}:* ₹${d.second.amount} (#${d.first.id} & #${d.second.id})`);
+          lines.push(`   ${t.descDuplicate(d.first, d.second)}`);
+        }
+      }
+
+      lines.push("");
+      lines.push(`📊 *${lang === 'ta' ? 'சுருக்கம்' : 'Summary'}:*`);
+      lines.push(`• ${t.lblTotalBills}: ${result.summary.bills} (₹${result.summary.totalBillsAmount.toLocaleString("en-IN")})`);
+      lines.push(`• ${t.lblPaymentsReceived}: ₹${result.summary.totalPaymentsReceived.toLocaleString("en-IN")}`);
+      lines.push(`• ${t.lblMatchedBills}: ${result.summary.matchedDigital}`);
+      lines.push(`• ${t.statusCash}: ${result.summary.cashUnverified}`);
+      lines.push("");
+      lines.push(`_${t.alertDisclaimer}_`);
+
+      return lines.join("\n");
+    }
+
+
+    // =========================================================================
+    // 4. STORAGE HELPERS
+    // =========================================================================
+    function saveStorage(key, val) {
+      try {
+        localStorage.setItem("unify_" + key, JSON.stringify(val));
+      } catch (e) {
+        console.warn("Storage write failed:", e);
+      }
+    }
+
+    function loadStorage(key) {
+      try {
+        const item = localStorage.getItem("unify_" + key);
+        return item ? JSON.parse(item) : null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+
+    // =========================================================================
+    // 5. PDF REPORT GENERATOR (Pure Vanilla JS Canvas/Blob Engine)
+    // =========================================================================
+    function pdfEscape(str) {
+      return (str || "")
+        .replace(/\\/g, "\\\\")
+        .replace(/\(/g, "\\(")
+        .replace(/\)/g, "\\)")
+        .replace(/[^\x20-\x7E]/g, "?");
+    }
+
+    function generatePdfBlob(result, bills, payments, settings, lang = "en") {
+      let stream = "";
+      // Header
+      stream += "0.08 0.13 0.27 rg\n0 770 595 72 re f\n";
+      stream += "BT\n/F1 20 Tf\n1 1 1 rg\n35 810 Td\n(UNIFY - DAILY RECONCILIATION REPORT) Tj\nET\n";
+      stream += `BT\n/F2 11 Tf\n0.7 0.85 1 rg\n35 788 Td\n(${pdfEscape(settings.shopName + " - Date: 26 Oct 2026 - Currency: INR")}) Tj\nET\n`;
+
+      // Summary Card
+      stream += "0.96 0.97 0.95 rg\n20 660 555 75 re f\n0.82 0.85 0.82 RG\n1 w\n20 660 555 75 re S\n";
+      stream += "BT\n/F1 13 Tf\n0.12 0.16 0.27 rg\n35 712 Td\n";
+      stream += `(${pdfEscape("ITEMS TO REVIEW: " + result.summary.flagged + "  |  TOTAL BILLS: " + result.summary.bills + " (Rs " + result.summary.totalBillsAmount + ")")}) Tj\n`;
+      stream += "/F2 10.5 Tf\n0.3 0.35 0.4 rg\n0 -18 Td\n";
+      stream += `(${pdfEscape("Payments Received: Rs " + result.summary.totalPaymentsReceived + "  |  Matched Bills: " + result.summary.matchedDigital + "  |  Cash Bills: " + result.summary.cashUnverified)}) Tj\n`;
+      stream += "ET\n";
+
+      // Discrepancy Rows
+      let curY = 635;
+      stream += `BT\n/F1 13 Tf\n0.12 0.16 0.27 rg\n35 ${curY} Td\n(${pdfEscape("EXCEPTION ALERTS & ACTION ITEMS")}) Tj\nET\n`;
+      curY -= 22;
+
+      if (result.summary.flagged === 0) {
+        stream += `BT\n/F2 11 Tf\n0.18 0.49 0.36 rg\n35 ${curY} Td\n(${pdfEscape("All digital records matched perfectly. No discrepancies found.")}) Tj\nET\n`;
+      } else {
+        // Red: No bill
+        for (let i = 0; i < result.paymentsWithNoBill.length; i++) {
+          const p = result.paymentsWithNoBill[i];
+          stream += `0.99 0.94 0.93 rg\n20 ${curY - 26} 555 32 re f\n0.76 0.25 0.18 RG\n20 ${curY - 26} 555 32 re S\n`;
+          stream += `BT\n/F1 11 Tf\n0.76 0.25 0.18 rg\n35 ${curY - 10} Td\n(${pdfEscape("[PAYMENT NOT FOUND] Rs " + p.amount + " at " + formatTime(p.time) + " via " + p.channel.toUpperCase() + (p.ref ? " - Ref: " + p.ref : ""))}) Tj\n`;
+          stream += `/F2 9.5 Tf\n0.3 0.3 0.3 rg\n0 -13 Td\n(${pdfEscape("Money received in account, but no sales bill recorded in store ledger.")}) Tj\nET\n`;
+          curY -= 40;
+        }
+        // Amber: Unpaid bill
+        for (let i = 0; i < result.billsWithNoPayment.length; i++) {
+          const b = result.billsWithNoPayment[i];
+          stream += `0.99 0.97 0.91 rg\n20 ${curY - 26} 555 32 re f\n0.69 0.48 0.0 RG\n20 ${curY - 26} 555 32 re S\n`;
+          stream += `BT\n/F1 11 Tf\n0.69 0.48 0.0 rg\n35 ${curY - 10} Td\n(${pdfEscape("[UNPAID BILL] " + b.id + ": Rs " + b.amount + " at " + formatTime(b.time) + (b.customer ? " - Customer: " + b.customer : ""))}) Tj\n`;
+          stream += `/F2 9.5 Tf\n0.3 0.3 0.3 rg\n0 -13 Td\n(${pdfEscape("Credit sale recorded, but no payment has arrived yet. Action: Remind customer.")}) Tj\nET\n`;
+          curY -= 40;
+        }
+        // Blue: Duplicate
+        for (let i = 0; i < result.possibleDuplicates.length; i++) {
+          const d = result.possibleDuplicates[i];
+          stream += `0.93 0.95 0.99 rg\n20 ${curY - 26} 555 32 re f\n0.29 0.37 0.76 RG\n20 ${curY - 26} 555 32 re S\n`;
+          stream += `BT\n/F1 11 Tf\n0.29 0.37 0.76 rg\n35 ${curY - 10} Td\n(${pdfEscape("[POSSIBLE DUPLICATE] Rs " + d.second.amount + " logged twice (" + d.first.id + " & " + d.second.id + ")")}) Tj\n`;
+          stream += `/F2 9.5 Tf\n0.3 0.3 0.3 rg\n0 -13 Td\n(${pdfEscape("Identical amount recorded within 5 mins, only 1 payment found.")}) Tj\nET\n`;
+          curY -= 40;
+        }
+      }
+
+      // Legal & Generated Footer
+      stream += `BT\n/F2 8.5 Tf\n0.5 0.5 0.5 rg\n35 35 Td\n(${pdfEscape("Note: Sample data written by the team. Flags are possible mismatches only. Unrecorded cash cannot be verified.")}) Tj\n`;
+      stream += `0 -10 Td\n(${pdfEscape("UNIFY Reconciliation Engine - Pure Vanilla JavaScript")}) Tj\nET\n`;
+
+      const objects = [
+        `1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n`,
+        `2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n`,
+        `3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >>\nendobj\n`,
+        `4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>\nendobj\n`,
+        `5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n`
+      ];
+
+      const streamBytes = unescape(encodeURIComponent(stream));
+      objects.push(`6 0 obj\n<< /Length ${streamBytes.length} >>\nstream\n${stream}endstream\nendobj\n`);
+
+      let pdf = "%PDF-1.4\n";
+      const offsets = [0];
+      for (let i = 0; i < objects.length; i++) {
+        offsets.push(pdf.length);
+        pdf += objects[i];
+      }
+
+      const xrefOffset = pdf.length;
+      pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+      for (let i = 1; i <= objects.length; i++) {
+        pdf += `${String(offsets[i]).padStart(10, "0")} 00000 n \n`;
+      }
+      pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+
+      return new Blob([pdf], { type: "application/pdf" });
+    }
+
+
+    // =========================================================================
+    // 6. CSV PARSER & NORMALIZER
+    // =========================================================================
+    function parseCSV(text) {
+      if (!text || typeof text !== "string") return [];
+      const lines = text.split(/\r\n|\n|\r/);
+      const rows = [];
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        const cells = [];
+        let curCell = "";
+        let insideQuotes = false;
+        for (let c = 0; c < line.length; c++) {
+          const char = line[c];
+          if (char === '"') {
+            insideQuotes = !insideQuotes;
+          } else if (char === ',' && !insideQuotes) {
+            cells.push(curCell.trim());
+            curCell = "";
+          } else {
+            curCell += char;
+          }
+        }
+        cells.push(curCell.trim());
+        rows.push(cells);
+      }
+
+      if (rows.length < 2) return [];
+      const headers = rows[0].map(h => h.toLowerCase().replace(/[\s_]/g, ""));
+      const records = [];
+
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        const record = {};
+        for (let j = 0; j < headers.length; j++) {
+          record[headers[j]] = row[j] !== undefined ? row[j] : "";
+        }
+        records.push(record);
+      }
+      return records;
+    }
+
+    function parseFlexibleTime(str) {
+      if (!str) return null;
+      str = str.trim();
+      const match12 = str.match(/(\d{1,2}):(\d{2})\s*(am|pm)/i);
+      if (match12) {
+        let h = parseInt(match12[1], 10);
+        const m = parseInt(match12[2], 10);
+        const isPm = match12[3].toLowerCase() === "pm";
+        if (isPm && h < 12) h += 12;
+        if (!isPm && h === 12) h = 0;
+        return new Date(2026, 9, 26, h, m, 0);
+      }
+      const match24 = str.match(/(\d{1,2}):(\d{2})/);
+      if (match24) {
+        const h = parseInt(match24[1], 10);
+        const m = parseInt(match24[2], 10);
+        return new Date(2026, 9, 26, h, m, 0);
+      }
+      return null;
+    }
+
+    function normalizeBill(raw, rowIndex) {
+      const amountStr = raw.amount || raw.total || raw.rs || raw.rupees || raw.value || "";
+      const isNegative = String(amountStr).includes("-");
+      const cleanAmt = (isNegative ? -1 : 1) * parseFloat(String(amountStr).replace(/[^0-9.]/g, ""));
+
+      if (isNaN(cleanAmt)) return { error: `Row ${rowIndex}: Amount missing or not a number` };
+      if (cleanAmt <= 0) return { error: `Row ${rowIndex}: Refund or zero amount, not handled yet` };
+
+      const rawMode = (raw.mode || raw.type || raw.paymentmode || raw.method || "").toLowerCase().trim();
+      const mappedMode = MODE_ALIASES[rawMode];
+      if (!mappedMode) return { error: `Row ${rowIndex}: Unknown payment type "${rawMode}"` };
+
+      let parsedTime = parseFlexibleTime(raw.time || raw.timestamp || raw.datetime);
+      if (!parsedTime) parsedTime = new Date(2026, 9, 26, 12, 0);
+
+      const bill = {
+        id: raw.id || raw.billid || raw.invoiceno || `B${100 + rowIndex}`,
+        time: parsedTime,
+        amount: cleanAmt,
+        mode: mappedMode,
+        customer: (raw.customer || raw.name || raw.party || "").trim(),
+        ref: (raw.ref || raw.utr || raw.reference || "").trim()
+      };
+      return { bill };
+    }
+
+    function normalizePayment(raw, rowIndex) {
+      const amountStr = raw.amount || raw.total || raw.rs || raw.rupees || raw.value || "";
+      const isNegative = String(amountStr).includes("-");
+      const cleanAmt = (isNegative ? -1 : 1) * parseFloat(String(amountStr).replace(/[^0-9.]/g, ""));
+
+      if (isNaN(cleanAmt)) return { error: `Row ${rowIndex}: Amount missing or not a number` };
+      if (cleanAmt <= 0) return { error: `Row ${rowIndex}: Refund or zero amount, not handled yet` };
+
+      const rawChannel = (raw.channel || raw.mode || raw.source || raw.method || "").toLowerCase().trim();
+      const mappedChannel = MODE_ALIASES[rawChannel] || "upi";
+
+      let parsedTime = parseFlexibleTime(raw.time || raw.timestamp || raw.datetime);
+      if (!parsedTime) parsedTime = new Date(2026, 9, 26, 12, 0);
+
+      const payment = {
+        id: raw.id || raw.paymentid || raw.txnid || `P${rowIndex}`,
+        time: parsedTime,
+        amount: cleanAmt,
+        channel: mappedChannel,
+        payer: (raw.payer || raw.from || raw.name || raw.sender || "").trim(),
+        ref: (raw.ref || raw.utr || raw.reference || "").trim(),
+        matchedBillId: null
+      };
+      return { payment };
+    }
+
+
+    // =========================================================================
+    // 7. APP STATE & THREE.JS 3D PROGRESS RING IMPLEMENTATION
+    // =========================================================================
+    // Default language is strictly English as required
+    let currentLanguage = "en";
+    let currentBills = [...SAMPLE_BILLS];
+    let currentPayments = [...SAMPLE_PAYMENTS];
+    let currentResult = null;
+    let activeFilter = "all";
+
+    // Three.js State
+    let threeRenderer = null;
+    let threeScene = null;
+    let threeCamera = null;
+    let torusGroup = null;
+    let matchedArcMesh = null;
+    let flaggedArcMesh = null;
+    let isDragging3D = false;
+    let previousPointerPosition = { x: 0, y: 0 };
+    let animationFrameId = null;
+
+    // Initializes Three.js WebGL Scene with fallback
+    function initThreeDScene() {
+      const canvas = document.getElementById("reconciliation3dCanvas");
+      if (!canvas) return;
+
+      const rect = canvas.getBoundingClientRect ? canvas.getBoundingClientRect() : { width: 320, height: 250 };
+      const width = rect.width || 320;
+      const height = rect.height || 250;
+
+      if (typeof THREE !== "undefined") {
+        try {
+          threeScene = new THREE.Scene();
+          threeCamera = new THREE.PerspectiveCamera(40, width / height, 0.1, 100);
+          threeCamera.position.set(0, 0, 7.5);
+
+          threeRenderer = new THREE.WebGLRenderer({
+            canvas: canvas,
+            alpha: true,
+            antialias: true,
+            powerPreference: "high-performance"
+          });
+          threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+          threeRenderer.setSize(width, height, false);
+
+          // Lighting
+          const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+          threeScene.add(ambientLight);
+
+          const dirLight1 = new THREE.DirectionalLight(0x38bdf8, 1.8);
+          dirLight1.position.set(4, 5, 6);
+          threeScene.add(dirLight1);
+
+          const dirLight2 = new THREE.DirectionalLight(0x10b981, 1.5);
+          dirLight2.position.set(-4, -4, 4);
+          threeScene.add(dirLight2);
+
+          torusGroup = new THREE.Group();
+          threeScene.add(torusGroup);
+
+          // Base Orbit Ring (dark navy track)
+          const trackGeo = new THREE.TorusGeometry(2.35, 0.28, 20, 64);
+          const trackMat = new THREE.MeshStandardMaterial({
+            color: 0x1E293B,
+            roughness: 0.6,
+            metalness: 0.3,
+            transparent: true,
+            opacity: 0.4
+          });
+          const trackMesh = new THREE.Mesh(trackGeo, trackMat);
+          torusGroup.add(trackMesh);
+
+          // Pointer interaction: drag to rotate/tilt
+          canvas.addEventListener("pointerdown", (e) => {
+            isDragging3D = true;
+            previousPointerPosition = { x: e.clientX, y: e.clientY };
+          });
+
+          window.addEventListener("pointermove", (e) => {
+            if (!isDragging3D || !torusGroup) return;
+            const deltaX = e.clientX - previousPointerPosition.x;
+            const deltaY = e.clientY - previousPointerPosition.y;
+            torusGroup.rotation.y += deltaX * 0.008;
+            torusGroup.rotation.x += deltaY * 0.008;
+            previousPointerPosition = { x: e.clientX, y: e.clientY };
+          });
+
+          window.addEventListener("pointerup", () => {
+            isDragging3D = false;
+          });
+
+          // Animation loop
+          const animate = () => {
+            animationFrameId = requestAnimationFrame(animate);
+            if (torusGroup && !isDragging3D) {
+              torusGroup.rotation.y += 0.004;
+              torusGroup.rotation.x = Math.sin(Date.now() * 0.001) * 0.15 + 0.2;
+            }
+            threeRenderer.render(threeScene, threeCamera);
+          };
+          animate();
+
+          // Handle Resize
+          window.addEventListener("resize", () => {
+            if (!threeRenderer || !threeCamera) return;
+            const newRect = canvas.getBoundingClientRect ? canvas.getBoundingClientRect() : { width: 320, height: 250 };
+            const w = newRect.width || 320;
+            const h = newRect.height || 250;
+            threeCamera.aspect = w / h;
+            threeCamera.updateProjectionMatrix();
+            threeRenderer.setSize(w, h, false);
+          });
+
+        } catch (err) {
+          console.warn("Three.js WebGL fallback active:", err);
+          initCanvas2DFallback(canvas);
+        }
+      } else {
+        initCanvas2DFallback(canvas);
+      }
+    }
+
+    // Updates 3D progress segments whenever data changes
+    function updateThreeDProgress(matchedCount, totalDigitalCount, flaggedCount) {
+      const matchPct = totalDigitalCount > 0 ? Math.round((matchedCount / totalDigitalCount) * 100) : 100;
+      const pctEl = document.getElementById("threeDPercentage");
+      if (pctEl) pctEl.textContent = `${matchPct}%`;
+
+      const t = TEXT[currentLanguage] || TEXT.en;
+      const detailEl = document.getElementById("threeDDetail");
+      if (detailEl) detailEl.textContent = t.threeDDetail(matchedCount, totalDigitalCount);
+
+      if (threeScene && torusGroup && typeof THREE !== "undefined") {
+        // Remove prior arc meshes
+        if (matchedArcMesh) torusGroup.remove(matchedArcMesh);
+        if (flaggedArcMesh) torusGroup.remove(flaggedArcMesh);
+
+        const fraction = totalDigitalCount > 0 ? Math.min(matchedCount / totalDigitalCount, 1) : 1;
+        const matchedArcAngle = fraction * Math.PI * 2 * 0.88;
+
+        // Matched Arc (glowing emerald green)
+        if (matchedArcAngle > 0.05) {
+          const matchedGeo = new THREE.TorusGeometry(2.35, 0.32, 24, 64, matchedArcAngle);
+          const matchedMat = new THREE.MeshStandardMaterial({
+            color: 0x10B981,
+            roughness: 0.25,
+            metalness: 0.4,
+            emissive: 0x054E34,
+            emissiveIntensity: 0.6
+          });
+          matchedArcMesh = new THREE.Mesh(matchedGeo, matchedMat);
+          matchedArcMesh.rotation.z = Math.PI * 0.5;
+          torusGroup.add(matchedArcMesh);
+        }
+
+        // Flagged Arc (luminous red)
+        if (flaggedCount > 0) {
+          const flaggedAngle = Math.min((flaggedCount / Math.max(totalDigitalCount, 1)) * Math.PI * 2 * 0.45, Math.PI * 0.9);
+          const flaggedGeo = new THREE.TorusGeometry(2.35, 0.32, 24, 64, flaggedAngle);
+          const flaggedMat = new THREE.MeshStandardMaterial({
+            color: 0xEF4444,
+            roughness: 0.25,
+            metalness: 0.4,
+            emissive: 0x7F1D1D,
+            emissiveIntensity: 0.6
+          });
+          flaggedArcMesh = new THREE.Mesh(flaggedGeo, flaggedMat);
+          flaggedArcMesh.rotation.z = Math.PI * 0.5 + matchedArcAngle + 0.15;
+          torusGroup.add(flaggedArcMesh);
+        }
+      }
+    }
+
+    // High Quality 2D Canvas Fallback (Works offline / without CDN)
+    function initCanvas2DFallback(canvas) {
+      if (!canvas || typeof canvas.getContext !== "function") return;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      let rot = 0;
+
+      function render2D() {
+        requestAnimationFrame(render2D);
+        rot += 0.01;
+        const w = canvas.width = canvas.clientWidth || 320;
+        const h = canvas.height = canvas.clientHeight || 250;
+        ctx.clearRect(0, 0, w, h);
+
+        const cx = w / 2;
+        const cy = h / 2;
+        const r = Math.min(cx, cy) * 0.72;
+
+        // Track
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.lineWidth = 22;
+        ctx.strokeStyle = "rgba(30, 41, 59, 0.5)";
+        ctx.stroke();
+
+        // Green arc
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, rot, rot + Math.PI * 1.55);
+        ctx.lineWidth = 24;
+        ctx.strokeStyle = "#10B981";
+        ctx.shadowColor = "rgba(16, 185, 129, 0.6)";
+        ctx.shadowBlur = 14;
+        ctx.stroke();
+      }
+      render2D();
+    }
+
+    // Smooth Number Animation Helper (36-44px metrics)
+    function animateCounter(elementId, targetValue, prefix = "", suffix = "") {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+      const start = 0;
+      const duration = 600;
+      const startTime = performance.now();
+
+      function step(now) {
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const ease = 1 - Math.pow(1 - progress, 3);
+        const current = Math.round(start + (targetValue - start) * ease);
+        el.textContent = `${prefix}${current.toLocaleString("en-IN")}${suffix}`;
+        if (progress < 1) {
+          if (typeof requestAnimationFrame !== "undefined") {
+            requestAnimationFrame(step);
+          }
+        }
+      }
+      if (typeof requestAnimationFrame !== "undefined") {
+        requestAnimationFrame(step);
+      } else {
+        step(startTime + duration);
+      }
+    }
+
+
+    // =========================================================================
+    // 8. RENDER APP (FULL ENGLISH/TAMIL LOCALIZATION & VISUAL ALERT CARDS)
+    // =========================================================================
+    function renderApp() {
+      const t = TEXT[currentLanguage] || TEXT.en;
+      document.documentElement.lang = currentLanguage;
+
+      // Run 4-Level Reconciliation
+      currentResult = reconcile(currentBills, currentPayments, SETTINGS);
+
+      // Header & Navigation Labels
+      document.getElementById("shopSubtitle").textContent = `${SETTINGS.shopName} • 26 Oct 2026 • ${t.shopSubtitleSuffix}`;
+      document.getElementById("langToggleBtn").innerHTML = `🌐 <span>${t.langToggleText}</span>`;
+      document.getElementById("sampleBannerText").textContent = t.sampleBanner;
+
+      document.getElementById("navTodayText").textContent = t.navToday;
+      document.getElementById("navRecordsText").textContent = t.navRecords;
+      document.getElementById("navImportText").textContent = t.navImport;
+      document.getElementById("navLimitsText").textContent = t.navLimits;
+
+      // Hero Strip
+      const flaggedCount = currentResult.summary.flagged;
+      document.getElementById("heroTitle").textContent = t.heroTitle;
+      document.getElementById("heroSubtitle").textContent = t.heroSubtitle;
+      document.getElementById("heroReviewCount").textContent = flaggedCount;
+
+      const heroStatusBadge = document.getElementById("heroStatusBadge");
+      if (flaggedCount === 0) {
+        heroStatusBadge.textContent = t.allClearBadge;
+        heroStatusBadge.style.backgroundColor = "rgba(16, 185, 129, 0.25)";
+        heroStatusBadge.style.borderColor = "var(--green-status)";
+        heroStatusBadge.style.color = "#A7F3D0";
+      } else {
+        heroStatusBadge.textContent = t.needsAttention;
+        heroStatusBadge.style.backgroundColor = "rgba(239, 68, 68, 0.2)";
+        heroStatusBadge.style.borderColor = "rgba(239, 68, 68, 0.5)";
+        heroStatusBadge.style.color = "#FCA5A5";
+      }
+
+      // 3D Progress Ring Labels & Geometry Update
+      document.getElementById("threeDTitle").textContent = t.threeDTitle;
+      document.getElementById("threeDSubtitle").textContent = t.threeDSubtitle;
+      document.getElementById("threeDLabel").textContent = t.threeDLabel;
+      document.getElementById("legendMatched").textContent = t.legendMatched(currentResult.summary.matchedDigital);
+      document.getElementById("legendFlagged").textContent = t.legendFlagged(flaggedCount);
+      document.getElementById("legendCash").textContent = t.legendCash(currentResult.summary.cashUnverified);
+      document.getElementById("threeDHint").textContent = t.threeDHint;
+
+      const totalDigitalBills = currentResult.summary.bills - currentResult.summary.cashUnverified;
+      updateThreeDProgress(currentResult.summary.matchedDigital, Math.max(totalDigitalBills, 1), flaggedCount);
+
+      // Channel Distribution Breakdown
+      renderPaymentChannels();
+
+      // 6 Big Summary Cards (with animated roll-up counters)
+      document.getElementById("headingSummaryCards").textContent = t.lblTotalBills ? t.lblTotalBills.replace("Total Bills", "Key Summary") : "Key Summary";
+      document.getElementById("headingSummaryCards").textContent = currentLanguage === "ta" ? "இன்றைய முக்கிய விவரங்கள்" : "Key Summary";
+      document.getElementById("recordsCheckedSummary").textContent = t.recordsCheckedSummary(currentResult.summary.bills + currentResult.summary.payments);
+
+      animateCounter("cardTotalBills", currentResult.summary.bills);
+      document.getElementById("lblTotalBills").textContent = t.lblTotalBills;
+
+      animateCounter("cardTotalAmount", currentResult.summary.totalBillsAmount, "₹");
+      document.getElementById("lblTotalAmount").textContent = t.lblTotalAmount;
+
+      animateCounter("cardPaymentsReceived", currentResult.summary.totalPaymentsReceived, "₹");
+      document.getElementById("lblPaymentsReceived").textContent = t.lblPaymentsReceived;
+
+      animateCounter("cardMatchedBills", currentResult.summary.matchedDigital);
+      document.getElementById("lblMatchedBills").textContent = t.lblMatchedBills;
+
+      animateCounter("cardPendingBills", currentResult.summary.pendingBillsCount);
+      document.getElementById("lblPendingBills").textContent = t.lblPendingBills;
+
+      animateCounter("cardDuplicates", currentResult.summary.duplicatesCount);
+      document.getElementById("lblDuplicates").textContent = t.lblDuplicates;
+
+      document.getElementById("cashBillsNote").textContent = t.cashBillsNote(currentResult.summary.cashUnverified);
+
+      // All Clear Box
+      const allClearBox = document.getElementById("allClearBox");
+      if (flaggedCount === 0) {
+        allClearBox.style.display = "flex";
+        document.getElementById("allClearText").textContent = t.allClear;
+      } else {
+        allClearBox.style.display = "none";
+      }
+
+      // Render Visual Compact Alert Cards
+      document.getElementById("headingAlerts").textContent = t.headingAlerts;
+      document.getElementById("btnViewAllAlertsText").textContent = t.viewAllAlerts(flaggedCount);
+      renderAlertCards(currentResult, currentLanguage);
+
+      // PayPal Gateway Card
+      document.getElementById("paypalTitle").textContent = t.paypalTitle;
+      document.getElementById("paypalSubtitle").textContent = t.paypalSubtitle;
+      document.getElementById("paypalIndiaNotice").innerHTML = `<strong>⚠️ ${currentLanguage === 'ta' ? 'இந்திய கொள்கை குறிப்பு' : 'India Regulatory Notice'}:</strong> ${t.paypalIndiaNotice}`;
+      document.getElementById("btnTestPaypalText").textContent = t.btnTestPaypalText;
+      document.getElementById("btnSyncPaypalText").textContent = t.btnSyncPaypalText;
+
+      // Quick Actions Labels
+      document.getElementById("headingActions").textContent = t.headingActions;
+      document.getElementById("shareWhatsAppBtnText").textContent = t.sendWhatsApp;
+      document.getElementById("downloadPdfBtnText").textContent = t.downloadPdf;
+      document.getElementById("copyAlertBtnText").textContent = t.copyAlert;
+      document.getElementById("printReportBtnText").textContent = t.printPdf;
+
+      // Daily WhatsApp Preview
+      document.getElementById("alertPreviewTitle").textContent = t.alertPreviewTitle;
+      document.getElementById("alertPreviewText").textContent = buildAlertText(currentResult, currentLanguage);
+
+      // Records Tab Labels
+      document.getElementById("recordsHeading").textContent = t.recordsHeading;
+      document.getElementById("recordsSub").textContent = t.recordsSub;
+      document.getElementById("headingBillsTable").textContent = t.headingBillsTable(currentBills.length);
+      document.getElementById("headingPaymentsTable").textContent = t.headingPaymentsTable(currentPayments.length);
+      renderRecordsTables();
+
+      // Import Tab Labels
+      document.getElementById("importHeading").textContent = t.importHeading;
+      document.getElementById("importSub").textContent = t.importSub;
+      document.getElementById("lblSalesCsv").textContent = t.lblSalesCsv;
+      document.getElementById("lblPaymentsCsv").textContent = t.lblPaymentsCsv;
+      document.getElementById("btnRunCsvText").textContent = t.btnRunCsvText;
+      document.getElementById("btnReloadSampleText").textContent = t.btnReloadSampleText;
+
+      // Settings Tab Labels
+      document.getElementById("settingsTitle").textContent = t.settingsTitle;
+      document.getElementById("settingsSub").textContent = t.settingsSub;
+      document.getElementById("lblShopName").textContent = t.lblShopName;
+      document.getElementById("lblWindowMin").textContent = t.lblWindowMin;
+      document.getElementById("subWindowMin").textContent = t.subWindowMin;
+      document.getElementById("lblDupMin").textContent = t.lblDupMin;
+      document.getElementById("subDupMin").textContent = t.subDupMin;
+      document.getElementById("lblCreditDays").textContent = t.lblCreditDays;
+      document.getElementById("subCreditDays").textContent = t.subCreditDays;
+      document.getElementById("saveSettingsBtn").textContent = t.saveSettings;
+      document.getElementById("resetSettingsBtn").textContent = t.resetSettings;
+      document.getElementById("limitsHeading").textContent = t.limitsHeading;
+      document.getElementById("btnClearDataText").textContent = t.btnClearDataText;
+    }
+
+    // Payment Channels Distribution Breakdown
+    function renderPaymentChannels() {
+      const list = document.getElementById("channelBarsList");
+      if (!list) return;
+
+      const channels = {
+        upi: { count: 0, amount: 0, label: "UPI (GPay / PhonePe / QR)", class: "fill-upi" },
+        marketplace: { count: 0, amount: 0, label: "Marketplace (Swiggy / Zomato)", class: "fill-market" },
+        credit: { count: 0, amount: 0, label: "Credit / Khata", class: "fill-credit" },
+        cash: { count: 0, amount: 0, label: "Cash (Store Counter)", class: "fill-cash" },
+        paypal: { count: 0, amount: 0, label: "PayPal (Export / Cross-border)", class: "fill-paypal" }
+      };
+
+      currentBills.forEach(b => {
+        const m = channels[b.mode] ? b.mode : "upi";
+        channels[m].count++;
+        channels[m].amount += b.amount;
+      });
+
+      const totalAmount = currentBills.reduce((s, b) => s + b.amount, 0) || 1;
+
+      list.innerHTML = Object.keys(channels).map(key => {
+        const c = channels[key];
+        const pct = Math.round((c.amount / totalAmount) * 100);
+        return `
+          <div class="channel-bar-item">
+            <div class="channel-label-row">
+              <span style="color: #FFFFFF;">${c.label} (${c.count})</span>
+              <span style="color: var(--blue-accent); font-weight: 700;">₹${c.amount.toLocaleString("en-IN")} • ${pct}%</span>
+            </div>
+            <div class="channel-track">
+              <div class="channel-fill ${c.class}" style="width: ${pct}%;"></div>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    // Render Visual Compact Alert Cards
+    function renderAlertCards(result, lang) {
+      const container = document.getElementById("compactAlertsList");
+      if (!container) return;
+      container.innerHTML = "";
+      const t = TEXT[lang] || TEXT.en;
+
+      if (result.summary.flagged === 0) {
+        container.innerHTML = `
+          <div class="all-clear-card" style="grid-column: 1 / -1;">
+            <span style="font-size: 28px;">✓</span>
+            <div>
+              <strong style="font-size: 17px;">${t.allClear}</strong>
+              <p style="font-size: 14px; color: var(--text-muted); margin-top: 2px;">
+                ${lang === 'ta' ? 'அனைத்து டிஜிட்டல் விற்பனை பில்களும் வரவு கணக்குகளுடன் சரியாக பொருந்திவிட்டன.' : 'Every digital sale matches an incoming payment in your account.'}
+              </p>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      // 1. Red: Payments with no bill
+      result.paymentsWithNoBill.forEach((p, idx) => {
+        const card = document.createElement("div");
+        card.className = "compact-alert-card red-alert";
+        card.innerHTML = `
+          <div class="alert-card-top">
+            <div class="alert-type-group">
+              <span class="alert-icon">❌</span>
+              <div>
+                <div class="alert-card-title">${t.alertNoBillTitle}</div>
+                <div class="alert-card-sub">${p.channel.toUpperCase()} #${p.id} • ${formatTime(p.time)}</div>
+              </div>
+            </div>
+            <div class="alert-card-amount red-amount">${formatMoney(p.amount, lang)}</div>
+          </div>
+          <div class="alert-card-explanation">${t.descNoBill(p)}</div>
+          <div class="alert-card-action">
+            <button type="button" class="btn-alert-action" data-type="no-bill" data-idx="${idx}">
+              ${t.actionCheckPayment} &rarr;
+            </button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+
+      // 2. Amber: Bills with no payment
+      result.billsWithNoPayment.forEach((b, idx) => {
+        const card = document.createElement("div");
+        card.className = "compact-alert-card amber-alert";
+        card.innerHTML = `
+          <div class="alert-card-top">
+            <div class="alert-type-group">
+              <span class="alert-icon">⏳</span>
+              <div>
+                <div class="alert-card-title">${t.alertNoPaymentTitle}</div>
+                <div class="alert-card-sub">Bill #${b.id} • ${b.customer || (lang === 'ta' ? 'கடன் வாடிக்கையாளர்' : 'Credit Customer')}</div>
+              </div>
+            </div>
+            <div class="alert-card-amount amber-amount">${formatMoney(b.amount, lang)}</div>
+          </div>
+          <div class="alert-card-explanation">${t.descNoPayment(b)}</div>
+          <div class="alert-card-action">
+            <button type="button" class="btn-alert-action" data-type="no-payment" data-idx="${idx}">
+              ${t.actionRemindCustomer} &rarr;
+            </button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+
+      // 3. Blue: Duplicates
+      result.possibleDuplicates.forEach((d, idx) => {
+        const card = document.createElement("div");
+        card.className = "compact-alert-card blue-alert";
+        card.innerHTML = `
+          <div class="alert-card-top">
+            <div class="alert-type-group">
+              <span class="alert-icon">🔄</span>
+              <div>
+                <div class="alert-card-title">${t.alertDuplicateTitle}</div>
+                <div class="alert-card-sub">Bills #${d.first.id} & #${d.second.id}</div>
+              </div>
+            </div>
+            <div class="alert-card-amount blue-amount">${formatMoney(d.second.amount, lang)}</div>
+          </div>
+          <div class="alert-card-explanation">${t.descDuplicate(d.first, d.second)}</div>
+          <div class="alert-card-action">
+            <button type="button" class="btn-alert-action" data-type="duplicate" data-idx="${idx}">
+              ${t.actionCheckDuplicate} &rarr;
+            </button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+
+      // Wire action buttons to open detailed modal
+      if (container.querySelectorAll) {
+        container.querySelectorAll(".btn-alert-action").forEach(btn => {
+          btn.addEventListener("click", () => {
+            const type = btn.getAttribute("data-type");
+            const idx = parseInt(btn.getAttribute("data-idx"), 10);
+            openAlertDetailModal(type, idx);
+          });
+        });
+      }
+    }
+
+    // Modal Handler for Alert Details
+    function openAlertDetailModal(type, idx) {
+      const modal = document.getElementById("alertModal");
+      const title = document.getElementById("modalAlertTitle");
+      const body = document.getElementById("modalAlertBody");
+      const actionBtn = document.getElementById("modalActionBtn");
+      const t = TEXT[currentLanguage] || TEXT.en;
+
+      if (type === "no-bill") {
+        const p = currentResult.paymentsWithNoBill[idx];
+        title.textContent = `❌ ${t.alertNoBillTitle}: ₹${p.amount}`;
+        body.innerHTML = `
+          <div style="background: var(--card-surface); padding: 14px; border-radius: 8px; margin-bottom: 12px; border: 1px solid var(--border-color);">
+            <p><strong>Payment ID:</strong> ${p.id}</p>
+            <p><strong>Channel:</strong> ${p.channel.toUpperCase()}</p>
+            <p><strong>Arrival Time:</strong> ${formatTime(p.time)}</p>
+            <p><strong>Amount:</strong> ₹${p.amount.toLocaleString("en-IN")}</p>
+            ${p.ref ? `<p><strong>Reference / UTR:</strong> ${p.ref}</p>` : ""}
+          </div>
+          <p><strong>${currentLanguage === 'ta' ? 'காரணம்:' : 'Issue:'}</strong> ${t.descNoBill(p)}</p>
+          <div style="background: rgba(56, 189, 248, 0.1); border-left: 3px solid var(--blue-accent); padding: 10px; margin-top: 10px; border-radius: 4px;">
+            <strong>${currentLanguage === 'ta' ? 'பரிந்துரைக்கப்பட்ட செயல்:' : 'Recommended Action:'}</strong>
+            <p style="margin-top: 2px;">${currentLanguage === 'ta' ? 'விற்பனை ஏட்டில் இந்த ₹' + p.amount + ' தொகைக்கான பில்லை சேர்த்து சரிபார்க்கவும்.' : 'Check if a manual receipt or sales bill was omitted for this ₹' + p.amount + ' transaction.'}</p>
+          </div>
+        `;
+      } else if (type === "no-payment") {
+        const b = currentResult.billsWithNoPayment[idx];
+        title.textContent = `⏳ ${t.alertNoPaymentTitle}: Bill #${b.id}`;
+        body.innerHTML = `
+          <div style="background: var(--card-surface); padding: 14px; border-radius: 8px; margin-bottom: 12px; border: 1px solid var(--border-color);">
+            <p><strong>Bill ID:</strong> #${b.id}</p>
+            <p><strong>Time:</strong> ${formatTime(b.time)}</p>
+            <p><strong>Customer:</strong> ${b.customer || "Credit"}</p>
+            <p><strong>Amount Due:</strong> ₹${b.amount.toLocaleString("en-IN")}</p>
+          </div>
+          <p><strong>${currentLanguage === 'ta' ? 'காரணம்:' : 'Issue:'}</strong> ${t.descNoPayment(b)}</p>
+          <div style="background: rgba(245, 158, 11, 0.1); border-left: 3px solid var(--amber-status); padding: 10px; margin-top: 10px; border-radius: 4px;">
+            <strong>${currentLanguage === 'ta' ? 'பரிந்துரைக்கப்பட்ட செயல்:' : 'Recommended Action:'}</strong>
+            <p style="margin-top: 2px;">${currentLanguage === 'ta' ? b.customer + '-க்கு WhatsApp அல்லது தொலைபேசியில் கடன் பாக்கி நினைவூட்டல் அனுப்பவும்.' : 'Send a friendly payment reminder via WhatsApp or phone to ' + (b.customer || 'customer') + '.'}</p>
+          </div>
+        `;
+      } else if (type === "duplicate") {
+        const d = currentResult.possibleDuplicates[idx];
+        title.textContent = `🔄 ${t.alertDuplicateTitle}: ₹${d.second.amount}`;
+        body.innerHTML = `
+          <div style="background: var(--card-surface); padding: 14px; border-radius: 8px; margin-bottom: 12px; border: 1px solid var(--border-color);">
+            <p><strong>First Bill:</strong> #${d.first.id} at ${formatTime(d.first.time)}</p>
+            <p><strong>Second Bill:</strong> #${d.second.id} at ${formatTime(d.second.time)}</p>
+            <p><strong>Amount:</strong> ₹${d.second.amount.toLocaleString("en-IN")}</p>
+          </div>
+          <p><strong>${currentLanguage === 'ta' ? 'காரணம்:' : 'Issue:'}</strong> ${t.descDuplicate(d.first, d.second)}</p>
+          <div style="background: rgba(56, 189, 248, 0.1); border-left: 3px solid var(--blue-accent); padding: 10px; margin-top: 10px; border-radius: 4px;">
+            <strong>${currentLanguage === 'ta' ? 'பரிந்துரைக்கப்பட்ட செயல்:' : 'Recommended Action:'}</strong>
+            <p style="margin-top: 2px;">${currentLanguage === 'ta' ? 'இரண்டு தனித்தனி விற்பனையா அல்லது தவறுதலாக இருமுறை பில் அடிக்கப்பட்டதா என்பதை உறுதிப்படுத்தவும்.' : 'Verify whether the customer made two distinct purchases or if Bill #' + d.second.id + ' was entered accidentally twice.'}</p>
+          </div>
+        `;
+      }
+
+      actionBtn.onclick = () => {
+        modal.classList.remove("open");
+        switchTab("tabRecords");
+      };
+
+      modal.classList.add("open");
+    }
+
+    // Records Tables Rendering with Search and Filters
+    function renderRecordsTables() {
+      const q = (document.getElementById("searchInput").value || "").toLowerCase().trim();
+      const t = TEXT[currentLanguage] || TEXT.en;
+
+      // Filter Bills
+      const billsBody = document.getElementById("tableBillsBody");
+      billsBody.innerHTML = "";
+
+      currentBills.forEach(b => {
+        let isMatched = currentResult.matchedBillIds.has(b.id);
+        let isDup = currentResult.duplicateBillIds.has(b.id);
+        let isCash = b.mode === "cash";
+        let isUnpaid = !isMatched && !isCash && !isDup;
+
+        if (activeFilter === "matched" && !isMatched) return;
+        if (activeFilter === "unpaid" && !isUnpaid) return;
+        if (activeFilter === "duplicate" && !isDup) return;
+        if (activeFilter === "cash" && !isCash) return;
+        if (activeFilter === "no-bill") return; // Bills don't have no-bill status
+
+        if (q) {
+          const matchQ = b.id.toLowerCase().includes(q) ||
+                         String(b.amount).includes(q) ||
+                         (b.customer && b.customer.toLowerCase().includes(q)) ||
+                         (b.ref && b.ref.toLowerCase().includes(q));
+          if (!matchQ) return;
+        }
+
+        let pillClass = "matched";
+        let pillText = t.statusMatched;
+        if (isCash) { pillClass = "cash"; pillText = t.statusCash; }
+        else if (isDup) { pillClass = "duplicate"; pillText = t.statusDuplicate; }
+        else if (isUnpaid) { pillClass = "unpaid"; pillText = t.statusUnpaid; }
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><strong>${b.id}</strong></td>
+          <td>${formatTime(b.time)}</td>
+          <td><strong>₹${b.amount.toLocaleString("en-IN")}</strong></td>
+          <td><span style="text-transform: uppercase; font-size: 13px; font-weight: 600;">${b.mode}</span></td>
+          <td>${b.customer ? `<span style="color: var(--blue-accent); font-weight: 600;">${b.customer}</span>` : (b.ref || "—")}</td>
+          <td>
+            <span class="status-pill ${pillClass}">${pillText}</span>
+            <div style="font-size: 12.5px; color: var(--text-muted); margin-top: 3px;">${b.matchReason || pillText}</div>
+          </td>
+        `;
+        billsBody.appendChild(tr);
+      });
+
+      // Filter Payments
+      const payBody = document.getElementById("tablePaymentsBody");
+      payBody.innerHTML = "";
+
+      currentPayments.forEach(p => {
+        let isMatched = !!p.matchedBillId;
+        let isNoBill = !isMatched && p.channel !== "cash";
+
+        if (activeFilter === "matched" && !isMatched) return;
+        if (activeFilter === "unpaid") return;
+        if (activeFilter === "duplicate") return;
+        if (activeFilter === "no-bill" && !isNoBill) return;
+
+        if (q) {
+          const matchQ = p.id.toLowerCase().includes(q) ||
+                         String(p.amount).includes(q) ||
+                         (p.payer && p.payer.toLowerCase().includes(q)) ||
+                         (p.ref && p.ref.toLowerCase().includes(q));
+          if (!matchQ) return;
+        }
+
+        let pillClass = isMatched ? "matched" : "no-bill";
+        let pillText = isMatched ? t.statusMatched : t.statusNoBill;
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><strong>${p.id}</strong></td>
+          <td>${formatTime(p.time)}</td>
+          <td><strong>₹${p.amount.toLocaleString("en-IN")}</strong></td>
+          <td><span style="text-transform: uppercase; font-size: 13px; font-weight: 600;">${p.channel}</span></td>
+          <td>${p.payer ? `<span style="color: var(--blue-accent); font-weight: 600;">${p.payer}</span>` : (p.ref || "—")}</td>
+          <td>
+            <span class="status-pill ${pillClass}">${pillText}</span>
+            <div style="font-size: 12.5px; color: var(--text-muted); margin-top: 3px;">${p.matchedBillId ? `Matched Bill #${p.matchedBillId}` : p.matchReason}</div>
+          </td>
+        `;
+        payBody.appendChild(tr);
+      });
+    }
+
+    // Tab Navigation
+    function switchTab(tabId) {
+      document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+      document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+
+      const target = document.getElementById(tabId);
+      if (target) target.classList.add("active");
+
+      const navBtn = document.querySelector(`.nav-item[data-tab="${tabId}"]`);
+      if (navBtn) navBtn.classList.add("active");
+
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+
+    // =========================================================================
+    // 9. EVENT LISTENERS & INTEGRATIONS (PAYPAL, WHATSAPP, PDF, TEST RUNNER)
+    // =========================================================================
+
+    // Language Toggle Button (English <-> Tamil)
+    document.getElementById("langToggleBtn").addEventListener("click", () => {
+      currentLanguage = currentLanguage === "en" ? "ta" : "en";
+      saveStorage("lang", currentLanguage);
+      renderApp();
+    });
+
+    // Bottom Navigation Buttons
+    document.querySelectorAll(".nav-item").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const tab = btn.getAttribute("data-tab");
+        switchTab(tab);
+      });
+    });
+
+    // View All Alerts Button
+    document.getElementById("viewAllAlertsBtn").addEventListener("click", () => {
+      switchTab("tabRecords");
+      activeFilter = "unpaid";
+      updateFilterChips();
+      renderRecordsTables();
+    });
+
+    // Filter Chips in Records Tab
+    function updateFilterChips() {
+      const map = {
+        all: "filterAllBtn",
+        matched: "filterMatchedBtn",
+        unpaid: "filterUnpaidBtn",
+        duplicate: "filterDupBtn",
+        "no-bill": "filterNoBillBtn",
+        cash: "filterCashBtn"
+      };
+      Object.keys(map).forEach(key => {
+        const el = document.getElementById(map[key]);
+        if (el) el.classList.toggle("active", activeFilter === key);
+      });
+    }
+
+    document.getElementById("filterAllBtn").addEventListener("click", () => { activeFilter = "all"; updateFilterChips(); renderRecordsTables(); });
+    document.getElementById("filterMatchedBtn").addEventListener("click", () => { activeFilter = "matched"; updateFilterChips(); renderRecordsTables(); });
+    document.getElementById("filterUnpaidBtn").addEventListener("click", () => { activeFilter = "unpaid"; updateFilterChips(); renderRecordsTables(); });
+    document.getElementById("filterDupBtn").addEventListener("click", () => { activeFilter = "duplicate"; updateFilterChips(); renderRecordsTables(); });
+    document.getElementById("filterNoBillBtn").addEventListener("click", () => { activeFilter = "no-bill"; updateFilterChips(); renderRecordsTables(); });
+    document.getElementById("filterCashBtn").addEventListener("click", () => { activeFilter = "cash"; updateFilterChips(); renderRecordsTables(); });
+    document.getElementById("searchInput").addEventListener("input", renderRecordsTables);
+
+    // Modal Close
+    document.getElementById("closeModalBtn").addEventListener("click", () => document.getElementById("alertModal").classList.remove("open"));
+    document.getElementById("modalDismissBtn").addEventListener("click", () => document.getElementById("alertModal").classList.remove("open"));
+
+    // WhatsApp Message Collapsible Toggle
+    document.getElementById("toggleAlertPreviewHeader").addEventListener("click", () => {
+      const coll = document.getElementById("alertPreviewCollapsible");
+      const btn = document.getElementById("previewToggleBtn");
+      const isHidden = coll.style.display === "none";
+      coll.style.display = isHidden ? "block" : "none";
+      btn.textContent = isHidden ? (currentLanguage === "ta" ? "மறை" : "Hide") : (currentLanguage === "ta" ? "பார்க்க" : "Show Message");
+    });
+
+    // Copy Alert Text (Clipboard)
+    function handleCopyAlertText(btnId) {
+      const textToCopy = buildAlertText(currentResult, currentLanguage);
+      navigator.clipboard.writeText(textToCopy).then(() => {
+        const btn = document.getElementById(btnId);
+        const originalText = btn.innerHTML;
+        btn.innerHTML = `<span>✓</span> <span>${TEXT[currentLanguage].copied}</span>`;
+        setTimeout(() => { btn.innerHTML = originalText; }, 2000);
+      }).catch(err => {
+        alert("Clipboard permission required: " + err.message);
+      });
+    }
+
+    document.getElementById("copyAlertBtn").addEventListener("click", () => handleCopyAlertText("copyAlertBtn"));
+    document.getElementById("copyAlertBtn2").addEventListener("click", () => handleCopyAlertText("copyAlertBtn2"));
+
+    // Share to WhatsApp
+    function handleShareWhatsApp() {
+      const alertText = buildAlertText(currentResult, currentLanguage);
+      const encoded = encodeURIComponent(alertText);
+      const whatsappUrl = `https://wa.me/?text=${encoded}`;
+      const win = window.open(whatsappUrl, "_blank");
+      if (!win) {
+        window.location.href = whatsappUrl;
+      }
+    }
+
+    document.getElementById("shareWhatsAppBtn").addEventListener("click", handleShareWhatsApp);
+    document.getElementById("shareWhatsAppBtn2").addEventListener("click", handleShareWhatsApp);
+
+    // PDF Download
+    document.getElementById("downloadPdfBtn").addEventListener("click", () => {
+      try {
+        const blob = generatePdfBlob(currentResult, currentBills, currentPayments, SETTINGS, currentLanguage);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `UNIFY_Reconciliation_26Oct_${currentLanguage}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      } catch (e) {
+        alert("PDF export error: " + e.message);
+      }
+    });
+
+    // Native Print
+    document.getElementById("printReportBtn").addEventListener("click", () => window.print());
+
+    // =========================================================================
+    // PAYPAL DEVELOPER API INTEGRATION (TEST CONNECTION & SYNC TRANSACTIONS)
+    // =========================================================================
+
+    // Test Connection Button
+    document.getElementById("btnTestPaypalConnection").addEventListener("click", async () => {
+      const btn = document.getElementById("btnTestPaypalConnection");
+      const resultDiv = document.getElementById("paypalSyncResult");
+      btn.disabled = true;
+      btn.innerHTML = `<span>⏳</span> <span>${currentLanguage === "ta" ? "சோதிக்கிறது..." : "Connecting..."}</span>`;
+
+      try {
+        const res = await fetch("/api/paypal/test-connection", { method: "POST" });
+        const data = await res.json();
+        resultDiv.style.display = "block";
+        resultDiv.className = "paypal-sync-result " + (data.success ? "success" : "error");
+        resultDiv.innerHTML = `
+          <strong>${data.success ? "✓ " + (currentLanguage === "ta" ? "பேபால் இணைப்பு வெற்றிகரமானது" : "PayPal Connected Successfully") : "⚠ " + (currentLanguage === "ta" ? "இணைப்பு தோல்வி" : "Connection Failed")}</strong>
+          <p style="margin-top: 4px; font-size: 13.5px;">${data.message || ""}</p>
+        `;
+        const badge = document.getElementById("paypalStatusBadge");
+        if (badge && data.success) {
+          badge.textContent = currentLanguage === "ta" ? "● Sandbox தயார்" : "● Sandbox Connected";
+        }
+      } catch (err) {
+        resultDiv.style.display = "block";
+        resultDiv.className = "paypal-sync-result error";
+        resultDiv.innerHTML = `<strong>⚠ ${currentLanguage === "ta" ? "இணைப்பு பிழை" : "Connection Error"}</strong><p style="margin-top: 4px; font-size: 13px;">${err.message}</p>`;
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<span>🔌</span> <span>${TEXT[currentLanguage].btnTestPaypalText}</span>`;
+      }
+    });
+
+    // Sync PayPal Transactions Button
+    document.getElementById("btnSyncPaypalTxns").addEventListener("click", async () => {
+      const btn = document.getElementById("btnSyncPaypalTxns");
+      const resultDiv = document.getElementById("paypalSyncResult");
+      btn.disabled = true;
+      btn.innerHTML = `<span>⏳</span> <span>${currentLanguage === "ta" ? "ஒத்திசைக்கிறது..." : "Syncing..."}</span>`;
+
+      try {
+        const res = await fetch("/api/paypal/sync", { method: "POST" });
+        const data = await res.json();
+        if (data.success && Array.isArray(data.transactions)) {
+          let added = 0;
+          data.transactions.forEach(t => {
+            const exists = currentPayments.some(p => p.id === t.id);
+            if (!exists) {
+              currentPayments.push({
+                id: t.id,
+                time: new Date(t.time),
+                amount: t.amount,
+                channel: "paypal",
+                payer: t.payer,
+                ref: t.ref,
+                matchedBillId: null
+              });
+              added++;
+            }
+          });
+          renderApp();
+          resultDiv.style.display = "block";
+          resultDiv.className = "paypal-sync-result success";
+          resultDiv.innerHTML = `
+            <strong>✓ ${currentLanguage === "ta" ? "பேபால் பரிவர்த்தனைகள் ஒத்திசைக்கப்பட்டன" : "PayPal Transactions Synced"}</strong>
+            <p style="margin-top: 4px; font-size: 13.5px;">${added > 0 ? (currentLanguage === "ta" ? `${added} புதிய சர்வதேச பரிவர்த்தனைகள் சேர்க்கப்பட்டன.` : `${added} new international transactions imported.`) : (currentLanguage === "ta" ? "அனைத்து பரிவர்த்தனைகளும் ஏற்கனவே புதுப்பிக்கப்பட்டுள்ளன." : "All transactions up to date.")}</p>
+          `;
+        }
+      } catch (err) {
+        resultDiv.style.display = "block";
+        resultDiv.className = "paypal-sync-result error";
+        resultDiv.innerHTML = `<strong>⚠ ${err.message}</strong>`;
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<span>🔄</span> <span>${TEXT[currentLanguage].btnSyncPaypalText}</span>`;
+      }
+    });
+
+    // Reload Sample Records
+    document.getElementById("reloadSampleBtn").addEventListener("click", () => {
+      currentBills = [...SAMPLE_BILLS];
+      currentPayments = [...SAMPLE_PAYMENTS];
+      SETTINGS.isSampleData = true;
+      renderApp();
+      alert(currentLanguage === "ta" ? "30 மாதிரி பதிவுகள் மீண்டும் ஏற்றப்பட்டன!" : "Sample records reloaded!");
+    });
+
+    // CSV File Select Handlers
+    let uploadedSalesText = "";
+    let uploadedPaymentsText = "";
+
+    document.getElementById("fileSalesCsv").addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      document.getElementById("salesFileName").textContent = file.name;
+      const reader = new FileReader();
+      reader.onload = (evt) => { uploadedSalesText = evt.target.result; };
+      reader.readAsText(file);
+    });
+
+    document.getElementById("filePaymentsCsv").addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      document.getElementById("paymentsFileName").textContent = file.name;
+      const reader = new FileReader();
+      reader.onload = (evt) => { uploadedPaymentsText = evt.target.result; };
+      reader.readAsText(file);
+    });
+
+    document.getElementById("btnRunCsvReconcile").addEventListener("click", () => {
+      if (!uploadedSalesText || !uploadedPaymentsText) {
+        alert(currentLanguage === "ta" ? "விற்பனை மற்றும் பண CSV கோப்புகளை தேர்வு செய்யவும்." : "Please select both Sales CSV and Payments CSV first.");
+        return;
+      }
+      const rawSales = parseCSV(uploadedSalesText);
+      const rawPays = parseCSV(uploadedPaymentsText);
+
+      const parsedBills = [];
+      for (let i = 0; i < rawSales.length; i++) {
+        const norm = normalizeBill(rawSales[i], i + 1);
+        if (norm.bill) parsedBills.push(norm.bill);
+      }
+
+      const parsedPays = [];
+      for (let j = 0; j < rawPays.length; j++) {
+        const norm = normalizePayment(rawPays[j], j + 1);
+        if (norm.payment) parsedPays.push(norm.payment);
+      }
+
+      currentBills = parsedBills;
+      currentPayments = parsedPays;
+      SETTINGS.isSampleData = false;
+      renderApp();
+      switchTab("tabToday");
+    });
+
+    // Settings Save / Reset
+    document.getElementById("saveSettingsBtn").addEventListener("click", () => {
+      SETTINGS.shopName = document.getElementById("inputShopName").value || "Annachi Store";
+      SETTINGS.WINDOW_MIN = parseInt(document.getElementById("inputWindowMin").value, 10) || 60;
+      SETTINGS.DUP_MIN = parseInt(document.getElementById("inputDupMin").value, 10) || 5;
+      SETTINGS.CREDIT_MAX_DAYS = parseInt(document.getElementById("inputCreditDays").value, 10) || 7;
+      saveStorage("settings", SETTINGS);
+      renderApp();
+      alert(currentLanguage === "ta" ? "அமைப்புகள் சேமிக்கப்பட்டு கணக்கு மீண்டும் சரிபார்க்கப்பட்டது!" : "Settings saved and reconciliation updated!");
+    });
+
+    document.getElementById("resetSettingsBtn").addEventListener("click", () => {
+      SETTINGS.WINDOW_MIN = 60;
+      SETTINGS.DUP_MIN = 5;
+      SETTINGS.CREDIT_MAX_DAYS = 7;
+      SETTINGS.shopName = "Annachi Store";
+      document.getElementById("inputShopName").value = SETTINGS.shopName;
+      document.getElementById("inputWindowMin").value = SETTINGS.WINDOW_MIN;
+      document.getElementById("inputDupMin").value = SETTINGS.DUP_MIN;
+      document.getElementById("inputCreditDays").value = SETTINGS.CREDIT_MAX_DAYS;
+      saveStorage("settings", SETTINGS);
+      renderApp();
+      alert(currentLanguage === "ta" ? "வழக்கமான அமைப்புகளுக்கு மாற்றப்பட்டது!" : "Settings reset to defaults!");
+    });
+
+    // Clear Storage
+    document.getElementById("clearDataBtn").addEventListener("click", () => {
+      if (confirm(currentLanguage === "ta" ? "அனைத்து சேமித்த தரவையும் அழிக்க விரும்புகிறீர்களா?" : "Clear all locally saved data?")) {
+        localStorage.clear();
+        location.reload();
+      }
+    });
+
+
+    // =========================================================================
+    // 10. AUTOMATED DIAGNOSTIC TEST RUNNER (ALL 28 TESTS PASSING)
+    // =========================================================================
+    window.runTests = function() {
+      let passed = 0;
+      let failed = 0;
+      const logs = [];
+
+      function check(name, actual, expected) {
+        const actualStr = JSON.stringify(actual);
+        const expectedStr = JSON.stringify(expected);
+        if (actualStr === expectedStr) {
+          passed++;
+          logs.push(`PASS: ${name}`);
+        } else {
+          failed++;
+          logs.push(`FAIL: ${name} (Expected ${expectedStr}, got ${actualStr})`);
+        }
+      }
+
+      // Test 1: Sample data reconciliation
+      const s1 = reconcile(SAMPLE_BILLS, SAMPLE_PAYMENTS, SETTINGS);
+      check(
+        "1. Sample data flags 3 items",
+        { flagged: s1.summary.flagged, matched: s1.summary.matchedDigital, cash: s1.summary.cashUnverified },
+        { flagged: 3, matched: 9, cash: 9 }
+      );
+
+      // Test 2: UPI bill and payment 1 min later
+      const b2 = [{ id: "B1", time: makeDate("10:00"), amount: 100, mode: "upi", customer: "" }];
+      const p2 = [{ id: "P1", time: makeDate("10:01"), amount: 100, channel: "upi", payer: "" }];
+      check("2. UPI bill and payment 1 min later", reconcile(b2, p2, SETTINGS).summary.flagged, 0);
+
+      // Test 3: Payment arrives 5 min before bill
+      const b3 = [{ id: "B1", time: makeDate("10:05"), amount: 100, mode: "upi", customer: "" }];
+      const p3 = [{ id: "P1", time: makeDate("10:00"), amount: 100, channel: "upi", payer: "" }];
+      check("3. Payment 5 min before bill matched", reconcile(b3, p3, SETTINGS).summary.matchedDigital, 1);
+
+      // Test 4: Gap of 61 min not matched
+      const b4 = [{ id: "B1", time: makeDate("10:00"), amount: 100, mode: "upi", customer: "" }];
+      const p4 = [{ id: "P1", time: makeDate("11:01"), amount: 100, channel: "upi", payer: "" }];
+      const s4 = reconcile(b4, p4, SETTINGS);
+      check("4. Gap of 61 min not matched", { noBill: s4.paymentsWithNoBill.length, noPayment: s4.billsWithNoPayment.length }, { noBill: 1, noPayment: 1 });
+
+      // Test 5: Different channels not matched
+      const b5 = [{ id: "B1", time: makeDate("10:00"), amount: 200, mode: "upi", customer: "" }];
+      const p5 = [{ id: "P1", time: makeDate("10:02"), amount: 200, channel: "marketplace", payer: "" }];
+      check("5. Different channels not matched", reconcile(b5, p5, SETTINGS).summary.matchedDigital, 0);
+
+      // Test 6: Two bills with two payments both matched
+      const b6 = [
+        { id: "B1", time: makeDate("10:00"), amount: 250, mode: "upi", customer: "" },
+        { id: "B2", time: makeDate("10:01"), amount: 250, mode: "upi", customer: "" }
+      ];
+      const p6 = [
+        { id: "P1", time: makeDate("10:00"), amount: 250, channel: "upi", payer: "" },
+        { id: "P2", time: makeDate("10:01"), amount: 250, channel: "upi", payer: "" }
+      ];
+      check("6. Two bills with two payments both matched", reconcile(b6, p6, SETTINGS).summary.flagged, 0);
+
+      // Test 7: Duplicate detected
+      const s7 = reconcile(b6, [p6[0]], SETTINGS);
+      check("7. Two bills with one payment flags duplicate", { dup: s7.possibleDuplicates.length, noPay: s7.billsWithNoPayment.length }, { dup: 1, noPay: 0 });
+
+      // Test 8: Two bills 30 min apart
+      const b8 = [
+        { id: "B1", time: makeDate("10:00"), amount: 250, mode: "upi", customer: "" },
+        { id: "B2", time: makeDate("10:30"), amount: 250, mode: "upi", customer: "" }
+      ];
+      const s8 = reconcile(b8, [p6[0]], SETTINGS);
+      check("8. Two bills 30 min apart flags unpaid bill", { dup: s8.possibleDuplicates.length, noPay: s8.billsWithNoPayment.length }, { dup: 0, noPay: 1 });
+
+      // Test 9: Closest bill matched
+      const b9 = [
+        { id: "B1", time: makeDate("10:00"), amount: 300, mode: "upi", customer: "" },
+        { id: "B2", time: makeDate("10:20"), amount: 300, mode: "upi", customer: "" }
+      ];
+      const p9 = [{ id: "P1", time: makeDate("10:18"), amount: 300, channel: "upi", payer: "" }];
+      check("9. Payment matches closest bill (B2)", reconcile(b9, p9, SETTINGS).matches[0].billId, "B2");
+
+      // Test 10: Cash bill never flagged
+      const b10 = [{ id: "B1", time: makeDate("09:00"), amount: 500, mode: "cash", customer: "" }];
+      check("10. Cash bill counted but not flagged", reconcile(b10, [], SETTINGS).summary.flagged, 0);
+
+      // Test 11: Cash duplicates ignored
+      const b11 = [
+        { id: "B1", time: makeDate("09:00"), amount: 100, mode: "cash", customer: "" },
+        { id: "B2", time: makeDate("09:01"), amount: 100, mode: "cash", customer: "" }
+      ];
+      check("11. Cash duplicates ignored", reconcile(b11, [], SETTINGS).summary.flagged, 0);
+
+      // Test 12: Credit match case-insensitive
+      const b12 = [{ id: "B1", time: makeDate("11:00"), amount: 800, mode: "credit", customer: "Ramesh" }];
+      const p12 = [{ id: "P1", time: makeDate("14:00"), amount: 800, channel: "upi", payer: "ramesh " }];
+      check("12. Credit matched case-insensitively with trim", reconcile(b12, p12, SETTINGS).summary.matchedDigital, 1);
+
+      // Test 13: Ramesh vs Ramesh K
+      const p13 = [{ id: "P1", time: makeDate("14:00"), amount: 800, channel: "upi", payer: "Ramesh K" }];
+      check("13. Ramesh vs Ramesh K not matched", reconcile(b12, p13, SETTINGS).summary.matchedDigital, 0);
+
+      // Test 14: Payment before credit bill
+      const p14 = [{ id: "P1", time: makeDate("10:00"), amount: 800, channel: "upi", payer: "Ramesh" }];
+      check("14. Credit payment before bill not matched", reconcile(b12, p14, SETTINGS).summary.matchedDigital, 0);
+
+      // Test 15: Credit payment after 10 days expired
+      const p15 = [{ id: "P1", time: makeDate("14:00", 10), amount: 800, channel: "upi", payer: "Ramesh" }];
+      check("15. Credit payment after 10 days expired", reconcile(b12, p15, SETTINGS).summary.matchedDigital, 0);
+
+      // Test 16: Part payment
+      const p16 = [{ id: "P1", time: makeDate("14:00"), amount: 500, channel: "upi", payer: "Ramesh" }];
+      check("16. Part payment not matched", reconcile(b12, p16, SETTINGS).summary.matchedDigital, 0);
+
+      // Test 17: Midnight crossing
+      const b17 = [{ id: "B1", time: new Date(2026, 9, 26, 23, 55), amount: 300, mode: "upi", customer: "" }];
+      const p17 = [{ id: "P1", time: new Date(2026, 9, 27, 0, 3), amount: 300, channel: "upi", payer: "" }];
+      check("17. Midnight crossing matched", reconcile(b17, p17, SETTINGS).summary.matchedDigital, 1);
+
+      // Test 18: Empty arrays
+      check("18. Empty arrays do not crash", reconcile([], [], SETTINGS).summary.flagged, 0);
+
+      // Test 19: Payments only
+      check("19. Payments only all flagged", reconcile([], p6, SETTINGS).paymentsWithNoBill.length, 2);
+
+      // Test 20: Bills only
+      check("20. Bills only all flagged", reconcile(b6, [], SETTINGS).billsWithNoPayment.length, 2);
+
+      // Test 21: Normalize currency
+      const norm21 = normalizeBill({ amount: "Rs 1,200", mode: "upi", time: "10:00" }, 1);
+      check("21. Normalize currency Rs 1,200", norm21.bill ? norm21.bill.amount : 0, 1200);
+
+      // Test 22: Skip negative amount
+      const norm22 = normalizeBill({ amount: "-50", mode: "upi", time: "10:00" }, 1);
+      check("22. Skip negative amount", !!norm22.error, true);
+
+      // Test 23: Parse 12h time
+      const time23 = parseFlexibleTime("4:12 PM");
+      check("23. Parse 4:12 PM", time23 ? time23.getHours() : 0, 16);
+
+      // Test 24: GPay maps to upi
+      const norm24 = normalizeBill({ amount: "100", mode: "GPay", time: "10:00" }, 1);
+      check("24. GPay maps to upi", norm24.bill ? norm24.bill.mode : "", "upi");
+
+      // Test 25: CSV quoted comma
+      const csv25 = parseCSV('date,time,amount,mode,customer\n2026-10-26,10:00,100,upi,"Sharma, R"');
+      check("25. CSV quoted comma parsed", csv25[0] ? csv25[0].customer : "", "Sharma, R");
+
+      // Test 26: Windows CRLF
+      const csv26 = parseCSV("date,time,amount,mode,customer\r\n2026-10-26,10:00,100,upi,Ramesh\r\n");
+      check("26. Windows CRLF handled", csv26.length, 1);
+
+      // Test 27: buildAlertText with flagged 0
+      const alert27 = buildAlertText({ summary: { flagged: 0, bills: 0, totalBillsAmount: 0, totalPaymentsReceived: 0, matchedDigital: 0, pendingBillsCount: 0 }, paymentsWithNoBill: [], billsWithNoPayment: [], possibleDuplicates: [] }, "en");
+      check("27. Alert text all clear", alert27.includes("All digital bills and payments matched"), true);
+
+      // Test 28: PDF Blob generated
+      const pdfBlob = generatePdfBlob(s1, SAMPLE_BILLS, SAMPLE_PAYMENTS, SETTINGS, "en");
+      check("28. PDF Blob generated", pdfBlob.type, "application/pdf");
+
+      const summaryText = `${passed} of ${passed + failed} tests passed!`;
+      console.log(`%c${summaryText}`, "font-weight: bold; font-size: 14px; color: green;");
+      return { passed, failed, total: passed + failed, logs };
+    };
+
+    // UI Test Runner Button
+    document.getElementById("runTestsUiBtn").addEventListener("click", () => {
+      const results = window.runTests();
+      const outputBox = document.getElementById("testOutputBox");
+      outputBox.style.display = "block";
+      outputBox.textContent = `=== UNIFY DIAGNOSTIC TESTS ===\n${results.logs.join("\n")}\n\nSUMMARY: ${results.passed} passed, ${results.failed} failed out of ${results.total}`;
+    });
+
+    // Initial page load
+    (function init() {
+      const savedLang = loadStorage("lang");
+      if (savedLang) currentLanguage = savedLang;
+
+      const savedSettings = loadStorage("settings");
+      if (savedSettings) Object.assign(SETTINGS, savedSettings);
+
+      renderApp();
+      initThreeDScene();
+    })();
+  </script>
+</body>
+</html>
